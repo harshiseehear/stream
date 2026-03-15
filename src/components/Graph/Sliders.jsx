@@ -3,7 +3,7 @@ export default function Sliders({
   repulsion, setRepulsion,
   inherentAttraction, setInherentAttraction,
 }) {
-  const sliderStyle = { width: 100, accentColor: '#a0856e' }
+  const sliderStyle = { width: 100 }
   const labelStyle = { display: 'flex', alignItems: 'center', gap: 8 }
   const numStyle = { width: 28, textAlign: 'right' }
 

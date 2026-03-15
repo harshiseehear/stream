@@ -16,7 +16,7 @@ export default function FieldSection({ sectionLabel, fields }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         {fields.map((f, fi) => (
           <div key={fi} style={{ display: 'flex', gap: 6 }}>
-            <span style={{ opacity: 0.55, flexShrink: 0, minWidth: 60 }}>{f.name}:</span>
+            <span style={{ opacity: 0.55, flexShrink: 0, width: 100, textAlign: 'left' }}>{f.name}:</span>
             <span style={{ wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>{f.value}</span>
           </div>
         ))}

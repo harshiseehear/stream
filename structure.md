@@ -767,6 +767,33 @@ DateTime: "2026-03-15T14:30:00.000Z"
 - Multiple users joined with `", "`
 - Falls back to the raw user ID as string if user not found in cache
 
+### FB-14 Quick Fix: Show assignee name (not `User #27690`)
+
+If a response payload contains only a numeric assignee ID (example: `27690`), resolve it through the same user cache used by user fields.
+
+1. Ensure users are loaded before rendering assignee text:
+```swift
+await streamcellViewModel.getAllUsers()
+```
+
+2. Resolve ID → full name from `streamcellViewModel.users`:
+```swift
+func assigneeDisplayName(for userId: Int?, users: [Int: SmUser]) -> String {
+    guard let userId else { return "Unassigned" }
+    guard let user = users[userId] else { return "User #\(userId)" }
+    return user.wrappedFullName
+}
+```
+
+3. Use the resolver when rendering quick-fix feedback cards/details:
+```swift
+Text(assigneeDisplayName(for: feedback.assigneeId, users: streamcellViewModel.users))
+```
+
+Notes:
+- The fallback `User #<id>` should only appear if the user cache has not loaded yet or the ID does not exist.
+- This keeps behavior consistent with `DisplayValueService.getUserDisplayName(userId:)` and `UserCellView`.
+
 **Actor Display:** Record metadata (`recordCreatedActor`, `lastUpdateActor`) uses the same system
 - `Actor` struct: `{ id: Int, type: ActorType }` where `ActorType` is `.user` or `.workflow`
 - Decoded from flat JSON keys: `recordCreatedActorId` + `recordCreatedActorType` → composed into `Actor`

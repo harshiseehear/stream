@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { fetchUserNames } from '../api/cell/users'
 import { fetchModuleTemplates, fetchDefinition, fetchInstances } from '../api/cell/records'
-import { formatFieldValue, setUserCache } from '../utils/formatFieldValue'
+import { formatFieldValue, setUserCache, getUserName } from '../utils/formatFieldValue'
 
 const MODULE_SEQ = 23
 
@@ -13,10 +13,12 @@ export function useRecords() {
     if (!token) return
 
     fetchUserNames()
-      .then(cache => setUserCache(cache))
-      .catch(() => {})
-
-    fetchModuleTemplates(MODULE_SEQ)
+      .then(cache => {
+        console.log('[useRecords] user cache loaded, size:', Object.keys(cache).length)
+        setUserCache(cache)
+      })
+      .catch(err => console.warn('[useRecords] fetchUserNames failed:', err))
+      .then(() => fetchModuleTemplates(MODULE_SEQ))
       .then(templates =>
         Promise.all(
           templates.map(t => {
@@ -76,6 +78,9 @@ export function useRecords() {
                 const statusLabel = inst.statusResps?.statusLabel ?? ''
                 const statusColor = statusDefs[statusUuid]?.color ?? null
 
+                const createdActorId = inst.recordCreatedActorId ?? inst.recordCreatedActor?.id ?? null
+                const createdByName = createdActorId != null ? getUserName(createdActorId) : null
+
                 return {
                   sid,
                   uuid: inst.uuid ?? '',
@@ -87,6 +92,7 @@ export function useRecords() {
                   statusColor,
                   recordCreated: inst.recordCreated ?? '',
                   lastUpdate: inst.lastUpdate ?? '',
+                  createdByName: createdByName ?? '',
                 }
               })
             }).catch(() => [])

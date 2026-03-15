@@ -3,3 +3,43 @@
   padding: 0;
   box-sizing: border-box;
 }
+
+input[type=range] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+  height: 20px;
+}
+
+input[type=range]::-webkit-slider-runnable-track {
+  height: 1px;
+  background: #a0856e;
+  border-radius: 0;
+}
+
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #a0856e;
+  border: none;
+  margin-top: -4.5px;
+}
+
+input[type=range]::-moz-range-track {
+  height: 1px;
+  background: #a0856e;
+  border: none;
+  border-radius: 0;
+}
+
+input[type=range]::-moz-range-thumb {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #a0856e;
+  border: none;
+}

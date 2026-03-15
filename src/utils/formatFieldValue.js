@@ -3,6 +3,10 @@ import { formatDate } from './formatDate'
 
 let _userCache = {}
 export function setUserCache(cache) { _userCache = cache }
+export function getUserName(id) {
+  const u = _userCache[id]
+  return u ? `${u.first_name} ${u.last_name}`.trim() : null
+}
 
 export function formatFieldValue(raw, fieldType) {
   if (raw === null || raw === undefined) return null
