@@ -1,6 +1,6 @@
 import { buildSchema } from '../utils/filterSchema'
 
-const API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
+const API_URL = '/api/gemini'
 
 function buildPrompt(schema, query) {
   return `You are a filter assistant. Given a natural language query, produce structured filter rules that match the available fields and values exactly.
@@ -79,14 +79,11 @@ function validateRules(rules, schema) {
 }
 
 export async function translateQuery(query, records) {
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY
-  if (!apiKey) throw new Error('Gemini API key not configured')
-
   const schema = buildSchema(records)
   console.log('[nlFilter] schema fields:', schema.fields.length, 'query:', query)
   const prompt = buildPrompt(schema, query)
 
-  const response = await fetch(`${API_URL}?key=${apiKey}`, {
+  const response = await fetch(API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

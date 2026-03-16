@@ -1,0 +1,28 @@
+[build]
+  publish = "dist"
+  command = "npm run build"
+
+# Proxy rewrites – replicate Vite dev server proxy in production
+[[redirects]]
+  from = "/proxy/records/*"
+  to = "https://records.onlinecolony.com/api/v1/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/proxy/permissions/*"
+  to = "https://permissions.onlinecolony.com/api/v1/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/proxy/scint/*"
+  to = "https://sandbox.onlinecolony.com/scint/api/v1/:splat"
+  status = 200
+  force = true
+
+# SPA fallback – serve index.html for all client-side routes
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
