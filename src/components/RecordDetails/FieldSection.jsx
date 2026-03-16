@@ -1,4 +1,4 @@
-export default function FieldSection({ sectionLabel, fields }) {
+export default function FieldSection({ sectionLabel, fields, borderColor, subtleColor }) {
   return (
     <div>
       {sectionLabel && (
@@ -7,10 +7,9 @@ export default function FieldSection({ sectionLabel, fields }) {
           fontWeight: 600,
           textTransform: 'uppercase',
           letterSpacing: '0.04em',
-          opacity: 0.45,
+          color: subtleColor || undefined,
+          opacity: subtleColor ? 1 : 0.45,
           marginBottom: 3,
-          paddingBottom: 2,
-          borderBottom: '1px solid rgba(160,133,110,0.12)',
         }}>{sectionLabel}</div>
       )}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>

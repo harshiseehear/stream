@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { login } from '../api/cell/auth'
+import { bgPage, brandAccent, textPrimary, colorError } from '../theme/colors'
 
 export default function Login() {
-  const [brownColor, setBrownColor] = useState('#a0856e')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -23,24 +23,9 @@ export default function Login() {
     }
   }
 
-  useEffect(() => {
-    const handleMouseMove = (e) => {
-      const x = e.clientX / window.innerWidth
-      const y = e.clientY / window.innerHeight
-
-      const r = Math.round(150 + x * 20)
-      const g = Math.round(125 + y * 15)
-      const b = Math.round(100 + (1 - x) * 20)
-
-      setBrownColor(`rgb(${r}, ${g}, ${b})`)
-    }
-    window.addEventListener('mousemove', handleMouseMove)
-    return () => window.removeEventListener('mousemove', handleMouseMove)
-  }, [])
-
   return (
     <div style={{
-      backgroundColor: '#f5f5dc',
+      backgroundColor: bgPage,
       minHeight: '100vh',
       display: 'flex',
       alignItems: 'center',
@@ -55,11 +40,10 @@ export default function Login() {
           lineHeight: 1,
         }}>
           <span style={{
-            color: brownColor,
-            transition: 'color 0.1s ease',
+            color: brandAccent,
           }}>stream</span>
           <span style={{
-            color: '#333',
+            color: textPrimary,
           }}>cell</span>
         </h1>
 
@@ -78,7 +62,7 @@ export default function Login() {
             style={{
               padding: '8px 0',
               border: 'none',
-              borderBottom: '1px solid #333',
+              borderBottom: `1px solid ${textPrimary}`,
               backgroundColor: 'transparent',
               fontSize: '1rem',
               outline: 'none',
@@ -94,7 +78,7 @@ export default function Login() {
             style={{
               padding: '8px 0',
               border: 'none',
-              borderBottom: '1px solid #333',
+              borderBottom: `1px solid ${textPrimary}`,
               backgroundColor: 'transparent',
               fontSize: '1rem',
               outline: 'none',
@@ -103,7 +87,7 @@ export default function Login() {
             }}
           />
           {error && (
-            <span style={{ color: '#c44', fontSize: '0.85rem', fontFamily: 'system-ui, sans-serif' }}>
+            <span style={{ color: colorError, fontSize: '0.85rem', fontFamily: 'system-ui, sans-serif' }}>
               {error}
             </span>
           )}
@@ -116,7 +100,7 @@ export default function Login() {
               padding: '8px 0',
               border: 'none',
               backgroundColor: 'transparent',
-              color: '#333',
+              color: textPrimary,
               fontSize: '1rem',
               fontFamily: 'system-ui, sans-serif',
               cursor: loading ? 'wait' : 'pointer',

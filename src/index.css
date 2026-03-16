@@ -14,7 +14,7 @@ input[type=range] {
 
 input[type=range]::-webkit-slider-runnable-track {
   height: 1px;
-  background: #a0856e;
+  background: var(--color-control);
   border-radius: 0;
 }
 
@@ -24,14 +24,14 @@ input[type=range]::-webkit-slider-thumb {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: #a0856e;
+  background: var(--color-control);
   border: none;
   margin-top: -4.5px;
 }
 
 input[type=range]::-moz-range-track {
   height: 1px;
-  background: #a0856e;
+  background: var(--color-control);
   border: none;
   border-radius: 0;
 }
@@ -40,6 +40,6 @@ input[type=range]::-moz-range-thumb {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: #a0856e;
+  background: var(--color-control);
   border: none;
 }

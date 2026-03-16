@@ -1,10 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-
-const PALETTE = [
-  [180, 120, 80],   [100, 140, 160],  [140, 170, 100],
-  [170, 100, 130],  [130, 130, 170],  [170, 150, 90],
-  [100, 160, 140],  [160, 110, 110],  [120, 150, 120],  [150, 120, 160],
-]
+import { graphPalette, templateColorFallback } from '../theme/colors'
 
 export function usePhysics(records) {
   const canvasRef = useRef(null)
@@ -60,7 +55,7 @@ export function usePhysics(records) {
     const templateColors = {}
     const templateLabels = {}
     templateIds.forEach((id, i) => {
-      templateColors[id] = PALETTE[i % PALETTE.length]
+      templateColors[id] = graphPalette[i % graphPalette.length]
       const rec = records.find(r => r.template === id)
       if (rec) templateLabels[id] = rec.templateLabel || ''
     })
@@ -206,6 +201,7 @@ export function usePhysics(records) {
             statusLabel: n.statusLabel, statusColor: n.statusColor,
             fieldSections: n.fieldSections, recordCreated: n.recordCreated,
             lastUpdate: n.lastUpdate, createdByName: n.createdByName,
+            templateColor: templateColors[n.template] || null,
             nodeX: n.x, nodeY: n.y,
           })
         }
@@ -368,7 +364,7 @@ export function usePhysics(records) {
 
       if (hoveredTemplate && centroids[hoveredTemplate]) {
         const { cx, cy } = centroids[hoveredTemplate]
-        const [cr, cg, cb] = templateColors[hoveredTemplate] || [160, 133, 110]
+        const [cr, cg, cb] = templateColors[hoveredTemplate] || templateColorFallback
         ctx.strokeStyle = `rgba(${cr}, ${cg}, ${cb}, 0.35)`
         ctx.lineWidth = 1
         for (const i of templateMap[hoveredTemplate]) {
@@ -382,7 +378,7 @@ export function usePhysics(records) {
       const HIT_R = 10
       for (let i = 0; i < nodes.length; i++) {
         const n = nodes[i]
-        const [cr, cg, cb] = templateColors[n.template] || [160, 133, 110]
+        const [cr, cg, cb] = templateColors[n.template] || templateColorFallback
         const dx = n.x - mx, dy = n.y - my
         const isHovered = mouseActive && Math.sqrt(dx * dx + dy * dy) < HIT_R
         if (isHovered) newHoveredIdx = i
@@ -405,6 +401,7 @@ export function usePhysics(records) {
             statusLabel: n.statusLabel, statusColor: n.statusColor,
             fieldSections: n.fieldSections, recordCreated: n.recordCreated,
             lastUpdate: n.lastUpdate, createdByName: n.createdByName,
+            templateColor: templateColors[n.template] || null,
             nodeX: n.x, nodeY: n.y,
           })
         } else {
@@ -418,7 +415,7 @@ export function usePhysics(records) {
         const label = templateLabels[tmpl]
         if (!label || !centroids[tmpl]) continue
         const { cx, cy } = centroids[tmpl]
-        const [cr, cg, cb] = templateColors[tmpl] || [160, 133, 110]
+        const [cr, cg, cb] = templateColors[tmpl] || templateColorFallback
         const isHov = tmpl === hoveredTemplate
         // Draw template circle — same style as records, just bigger
         ctx.beginPath()

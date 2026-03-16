@@ -1,11 +1,19 @@
+import { useState } from 'react'
 import { useRecords } from '../hooks/useRecords'
+import { bgPage, textSecondary } from '../theme/colors'
+import { useFilteredRecords } from '../hooks/useFilteredRecords'
 import { usePhysics } from '../hooks/usePhysics'
 import Graph from '../components/Graph/Graph'
 import Sliders from '../components/Graph/Sliders'
 import RecordDetails from '../components/RecordDetails/RecordDetails'
+import FilterPanel from '../components/Filter/FilterPanel'
+import DraggablePanel from '../components/DraggablePanel'
 
 export default function Home() {
   const records = useRecords()
+  const [filterRules, setFilterRules] = useState([])
+  const [conjunction, setConjunction] = useState('and')
+  const filteredRecords = useFilteredRecords(records, filterRules, conjunction)
 
   const {
     canvasRef,
@@ -15,11 +23,13 @@ export default function Home() {
     attraction, setAttraction,
     repulsion, setRepulsion,
     inherentAttraction, setInherentAttraction,
-  } = usePhysics(records)
+  } = usePhysics(filteredRecords)
+
+  const filterPanel = FilterPanel({ records, rules: filterRules, conjunction, onConjunctionChange: setConjunction, onChange: setFilterRules })
 
   return (
     <div style={{
-      backgroundColor: '#f5f5dc',
+      backgroundColor: bgPage,
       minHeight: '100vh',
       position: 'relative',
       overflow: 'hidden',
@@ -28,26 +38,35 @@ export default function Home() {
 
       <div style={{
         position: 'absolute',
-        top: 16,
-        left: 16,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 8,
+        inset: 0,
+        pointerEvents: 'none',
         fontFamily: 'system-ui, sans-serif',
         fontSize: 12,
-        color: '#7a6a5a',
+        color: textSecondary,
         userSelect: 'none',
       }}>
-        <Sliders
-          attraction={attraction} setAttraction={setAttraction}
-          repulsion={repulsion} setRepulsion={setRepulsion}
-          inherentAttraction={inherentAttraction} setInherentAttraction={setInherentAttraction}
-        />
+        <div style={{ pointerEvents: 'auto' }}>
+          <DraggablePanel title="Filters" defaultWidth={320} defaultHeight={200} defaultX={16} defaultY={16} action={filterPanel.addButton}>
+            {filterPanel.body}
+          </DraggablePanel>
+        </div>
 
-        <RecordDetails
-          record={hoveredRecord || pinnedRecord}
-          onUnpin={pinnedRecord ? () => { pinnedIdxRef.current = null; setPinnedRecord(null) } : null}
-        />
+        <div style={{ pointerEvents: 'auto' }}>
+          <DraggablePanel title="Graph" defaultWidth={260} defaultHeight={120} defaultX={16} defaultY={232}>
+            <Sliders
+              attraction={attraction} setAttraction={setAttraction}
+              repulsion={repulsion} setRepulsion={setRepulsion}
+              inherentAttraction={inherentAttraction} setInherentAttraction={setInherentAttraction}
+            />
+          </DraggablePanel>
+        </div>
+
+        <div style={{ pointerEvents: 'auto' }}>
+          <RecordDetails
+            record={hoveredRecord || pinnedRecord}
+            onUnpin={pinnedRecord ? () => { pinnedIdxRef.current = null; setPinnedRecord(null) } : null}
+          />
+        </div>
       </div>
     </div>
   )
