@@ -239,16 +239,16 @@ export default function Home() {
             pinned={false}
             initialPos={hoveredPos}
             onBringToFront={() => { setHoveredZIndex(++zCounterRef.current); setSelectedSid(hoveredRecord?.sid ?? null) }}
-            onPin={() => {
+            onPin={(currentPos) => {
               if (hoveredRecord) {
-                const pinned = { ...hoveredRecord, _pinId: `${hoveredRecord.sid}-${Date.now()}`, _pos: { ...hoveredPos } }
+                const pinned = { ...hoveredRecord, _pinId: `${hoveredRecord.sid}-${Date.now()}`, _pos: currentPos || { ...hoveredPos } }
                 setPinnedRecords(prev => [...prev, pinned])
                 setHoveredRecord(null)
               }
             }}
-            onCollapse={() => {
+            onCollapse={(currentPos) => {
               if (hoveredRecord) {
-                const pinned = { ...hoveredRecord, _pinId: `${hoveredRecord.sid}-${Date.now()}`, _pos: { ...hoveredPos }, _collapsed: true }
+                const pinned = { ...hoveredRecord, _pinId: `${hoveredRecord.sid}-${Date.now()}`, _pos: currentPos || { ...hoveredPos }, _collapsed: true }
                 setPinnedRecords(prev => [...prev, pinned])
                 setHoveredRecord(null)
               }

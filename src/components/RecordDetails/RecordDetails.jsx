@@ -85,7 +85,7 @@ export default function RecordDetails({ record, onPin, onUnpin, onClose, onColla
         onDoubleClick={() => {
           if (!pinned && onCollapse) {
             onCollapse(pos)
-          } else {
+          } else if (pinned) {
             setCollapsed(c => !c)
           }
         }}

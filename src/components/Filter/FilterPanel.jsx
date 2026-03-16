@@ -192,7 +192,7 @@ export default function FilterPanel({ records, rules, conjunctions, onConjunctio
               lineHeight: 1,
               flexShrink: 0,
             }}
-          >⡇</span>
+          >·</span>
           <div style={{ flex: 1, minWidth: 0 }}>
             <FilterRule
               rule={rule}
