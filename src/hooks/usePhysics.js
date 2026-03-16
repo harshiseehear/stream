@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { graphPalette, templateColorFallback } from '../theme/colors'
+import { buildBacklinks } from '../utils/extractBacklinks'
 
 export function usePhysics(records) {
   const canvasRef = useRef(null)
@@ -23,6 +24,7 @@ export function usePhysics(records) {
   const [attraction, setAttraction] = useState(.5)
   const [repulsion, setRepulsion] = useState(.5)
   const [inherentAttraction, setInherentAttraction] = useState(1)
+  const backlinkAdjRef = useRef([])
 
   useEffect(() => {
     physicsRef.current = { attraction, repulsion, inherentAttraction }
@@ -106,6 +108,28 @@ export function usePhysics(records) {
       if (!templateMap[t]) templateMap[t] = []
       templateMap[t].push(i)
     }
+
+    // Build backlink adjacency (index-based) for fast render lookup
+    const sidAdj = buildBacklinks(records)
+    const sidToIdx = {}
+    for (let i = 0; i < nodes.length; i++) {
+      if (nodes[i].sid) sidToIdx[nodes[i].sid] = i
+    }
+    const backlinkAdj = new Array(nodes.length)
+    for (let i = 0; i < nodes.length; i++) {
+      const linked = sidAdj.get(nodes[i].sid)
+      if (linked) {
+        const indices = []
+        for (const s of linked) {
+          const idx = sidToIdx[s]
+          if (idx !== undefined) indices.push(idx)
+        }
+        backlinkAdj[i] = indices
+      } else {
+        backlinkAdj[i] = []
+      }
+    }
+    backlinkAdjRef.current = backlinkAdj
 
     const onMouseMove = (e) => {
       const rect = canvas.getBoundingClientRect()
@@ -398,6 +422,33 @@ export function usePhysics(records) {
         ctx.lineWidth = 1
         for (const i of templateMap[hoveredTemplate]) {
           ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(nodes[i].x, nodes[i].y); ctx.stroke()
+        }
+      }
+
+      // Draw backlink lines for hovered node
+      // Draw backlink lines for hovered node
+      {
+        let blHovIdx = null
+        if (mouseActive) {
+          for (let i = 0; i < nodes.length; i++) {
+            const dx = nodes[i].x - mx, dy = nodes[i].y - my
+            if (Math.sqrt(dx * dx + dy * dy) < 10) { blHovIdx = i; break }
+          }
+        }
+        if (blHovIdx !== null) {
+          const linked = backlinkAdjRef.current[blHovIdx]
+          if (linked && linked.length > 0) {
+            ctx.strokeStyle = 'rgba(180, 180, 180, 0.3)'
+            ctx.lineWidth = 1
+            const src = nodes[blHovIdx]
+            for (const li of linked) {
+              const tgt = nodes[li]
+              ctx.beginPath()
+              ctx.moveTo(src.x, src.y)
+              ctx.lineTo(tgt.x, tgt.y)
+              ctx.stroke()
+            }
+          }
         }
       }
 

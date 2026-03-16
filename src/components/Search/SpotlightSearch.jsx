@@ -2,17 +2,26 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useUniversalSearch } from '../../hooks/useUniversalSearch'
 import { bgPage, textSecondary, textPlaceholder, dropdownHoverBg, dropdownText } from '../../theme/colors'
 
-export default function SearchBar({ records, onSelect }) {
+export default function SearchBar({ records, onSelect, visible, onClose }) {
   const [query, setQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
   const [activeIndex, setActiveIndex] = useState(0)
-  const [focused, setFocused] = useState(false)
   const inputRef = useRef(null)
   const listRef = useRef(null)
   const containerRef = useRef(null)
 
   const results = useUniversalSearch(records, debouncedQuery)
-  const showResults = focused && debouncedQuery.trim().length >= 2
+  const showResults = debouncedQuery.trim().length >= 2
+
+  // Auto-focus and reset when opened
+  useEffect(() => {
+    if (visible) {
+      setQuery('')
+      setDebouncedQuery('')
+      setActiveIndex(0)
+      setTimeout(() => inputRef.current?.focus(), 0)
+    }
+  }, [visible])
 
   // Debounce query
   useEffect(() => {
@@ -32,24 +41,24 @@ export default function SearchBar({ records, onSelect }) {
     if (item) item.scrollIntoView({ block: 'nearest' })
   }, [activeIndex])
 
-  // Close results on outside click
+  // Close on outside click
   useEffect(() => {
+    if (!visible) return
     const handler = (e) => {
       if (containerRef.current && !containerRef.current.contains(e.target)) {
-        setFocused(false)
+        onClose()
       }
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
-  }, [])
+  }, [visible, onClose])
 
   const handleSelect = useCallback((record) => {
     onSelect(record)
     setQuery('')
     setDebouncedQuery('')
-    inputRef.current?.blur()
-    setFocused(false)
-  }, [onSelect])
+    onClose()
+  }, [onSelect, onClose])
 
   const handleKeyDown = useCallback((e) => {
     if (e.key === 'ArrowDown') {
@@ -63,8 +72,7 @@ export default function SearchBar({ records, onSelect }) {
       if (results[activeIndex]) handleSelect(results[activeIndex].record)
     } else if (e.key === 'Escape') {
       e.preventDefault()
-      inputRef.current?.blur()
-      setFocused(false)
+      onClose()
     }
   }, [results, activeIndex, handleSelect])
 
@@ -81,31 +89,45 @@ export default function SearchBar({ records, onSelect }) {
     )
   }
 
+  if (!visible) return null
+
   return (
-    <div
-      ref={containerRef}
-      style={{
-        position: 'relative',
-        width: '100%',
-        fontFamily: 'system-ui, sans-serif',
-      }}
-    >
-      {/* Search input */}
+    <div style={{
+      position: 'fixed',
+      inset: 0,
+      zIndex: 9999,
+      display: 'flex',
+      alignItems: 'flex-start',
+      justifyContent: 'center',
+      paddingTop: '20vh',
+    }}>
       <div
-        style={{ padding: '0 6px' }}
-        onKeyDown={handleKeyDown}
+        ref={containerRef}
+        style={{
+          width: 480,
+          maxWidth: 'calc(100vw - 32px)',
+          background: bgPage,
+          borderRadius: 16,
+          border: '1px solid #8B6914',
+          fontFamily: 'system-ui, sans-serif',
+          overflow: 'hidden',
+        }}
       >
+        {/* Search input */}
+        <div
+          style={{ padding: '12px 16px' }}
+          onKeyDown={handleKeyDown}
+        >
         <input
           ref={inputRef}
           type="text"
           value={query}
           onChange={e => setQuery(e.target.value)}
-          onFocus={() => setFocused(true)}
           style={{
             width: '100%',
             fontSize: 14,
             fontFamily: 'inherit',
-            background: 'transparent',
+            background: bgPage,
             border: 'none',
             outline: 'none',
             color: dropdownText,
@@ -157,17 +179,18 @@ export default function SearchBar({ records, onSelect }) {
         </div>
       )}
 
-      {/* Empty state */}
-      {showResults && results.length === 0 && (
-        <div style={{
-          padding: '12px 10px',
-          textAlign: 'center',
-          color: textPlaceholder,
-          fontSize: 13,
-        }}>
-          No matching records
-        </div>
-      )}
+        {/* Empty state */}
+        {showResults && results.length === 0 && (
+          <div style={{
+            padding: '12px 10px',
+            textAlign: 'center',
+            color: textPlaceholder,
+            fontSize: 13,
+          }}>
+            No matching records
+          </div>
+        )}
+      </div>
     </div>
   )
 }

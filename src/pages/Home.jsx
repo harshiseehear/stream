@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useRecords } from '../hooks/useRecords'
 import { bgPage, textSecondary } from '../theme/colors'
@@ -17,6 +17,19 @@ export default function Home() {
   const records = useRecords()
   const [filterRules, setFilterRules] = useState([])
   const [conjunction, setConjunction] = useState('and')
+  const [searchVisible, setSearchVisible] = useState(false)
+  const closeSearch = useCallback(() => setSearchVisible(false), [])
+
+  useEffect(() => {
+    const handler = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setSearchVisible(v => !v)
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [])
   const filteredRecords = useFilteredRecords(records, filterRules, conjunction)
 
   const {
@@ -95,7 +108,7 @@ export default function Home() {
         right: 16,
         display: 'flex',
         alignItems: 'center',
-        gap: 12,
+        gap: 8,
         zIndex: 10,
       }}>
         <ThemeToggle />
@@ -117,6 +130,18 @@ export default function Home() {
           Sign out
         </button>
       </div>
+
+      <span style={{
+        position: 'absolute',
+        bottom: 16,
+        left: 16,
+        color: textSecondary,
+        fontFamily: 'system-ui, sans-serif',
+        fontSize: 12,
+        zIndex: 10,
+      }}>
+        {navigator.platform.toUpperCase().includes('MAC') ? '⌘K' : 'Ctrl+Shift+K'} to search
+      </span>
 
       {records === null && (
         <div style={{
@@ -214,15 +239,14 @@ export default function Home() {
           />
         </div>
 
-        <div style={{ pointerEvents: 'auto' }}>
-          <DraggablePanel title="Search" defaultWidth={320} defaultHeight={'auto'} defaultX={Math.round(window.innerWidth / 2 - 160)} defaultY={16}>
-            <SearchBar
-              records={records}
-              onSelect={handleSearchSelect}
-            />
-          </DraggablePanel>
-        </div>
       </div>
+
+      <SearchBar
+        records={records}
+        onSelect={handleSearchSelect}
+        visible={searchVisible}
+        onClose={closeSearch}
+      />
     </div>
   )
 }
