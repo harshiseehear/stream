@@ -11,6 +11,11 @@ export async function authFetch(url, options = {}) {
     headers: { ...getAuthHeaders(), ...options.headers },
   })
   if (!res.ok) {
+    if (res.status === 401 || res.status === 403) {
+      sessionStorage.removeItem('ishToken')
+      window.location.replace('/login')
+      throw new Error('Session expired')
+    }
     const msg = await res.text().catch(() => '')
     throw new Error(msg || `HTTP ${res.status}`)
   }

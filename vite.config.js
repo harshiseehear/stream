@@ -11,6 +11,11 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/proxy\/records/, '/api/v1'),
       },
+      '/proxy/permissions': {
+        target: 'https://permissions.onlinecolony.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/proxy\/permissions/, '/api/v1'),
+      },
       '/proxy/scint': {
         target: 'https://sandbox.onlinecolony.com',
         changeOrigin: true,

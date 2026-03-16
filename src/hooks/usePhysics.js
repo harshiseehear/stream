@@ -12,16 +12,17 @@ export function usePhysics(records) {
   const cameraRef = useRef({ x: 0, y: 0, zoom: 1 })
   const templateOffsetsRef = useRef({})
   const hoveredIdxRef = useRef(null)
-  const pinnedIdxRef = useRef(null)
+  const pinnedIndicesRef = useRef(new Set())
+  const hoveredPosRef = useRef({ x: 16, y: 368 })
   const physicsRef = useRef({ attraction: 0.3, repulsion: 0.5, inherentAttraction: 0.5 })
   const alphaRef = useRef(1.0)
   const reheatRef = useRef(false)
 
   const [hoveredRecord, setHoveredRecord] = useState(null)
-  const [pinnedRecord, setPinnedRecord] = useState(null)
-  const [attraction, setAttraction] = useState(0.3)
-  const [repulsion, setRepulsion] = useState(0.5)
-  const [inherentAttraction, setInherentAttraction] = useState(0.5)
+  const [pinnedRecords, setPinnedRecords] = useState([])
+  const [attraction, setAttraction] = useState(.5)
+  const [repulsion, setRepulsion] = useState(.5)
+  const [inherentAttraction, setInherentAttraction] = useState(1)
 
   useEffect(() => {
     physicsRef.current = { attraction, repulsion, inherentAttraction }
@@ -83,6 +84,9 @@ export function usePhysics(records) {
         recordCreated: rec.recordCreated ?? '',
         lastUpdate: rec.lastUpdate ?? '',
         createdByName: rec.createdByName ?? '',
+        containerUUID: rec.containerUUID ?? '',
+        containerLabel: rec.containerLabel ?? '',
+        containerLevelLabel: rec.containerLevelLabel ?? '',
         x: existing ? existing.x : PAD + Math.random() * (w - PAD * 2),
         y: existing ? existing.y : PAD + Math.random() * (h - PAD * 2),
         vx: existing ? existing.vx : (Math.random() - 0.5) * 0.6,
@@ -190,21 +194,6 @@ export function usePhysics(records) {
         dragRef.current = closest
         nodes[closest].vx = 0
         nodes[closest].vy = 0
-        if (pinnedIdxRef.current === closest) {
-          pinnedIdxRef.current = null
-          setPinnedRecord(null)
-        } else {
-          pinnedIdxRef.current = closest
-          const n = nodes[closest]
-          setPinnedRecord({
-            sid: n.sid, templateLabel: n.templateLabel, recordLabel: n.recordLabel,
-            statusLabel: n.statusLabel, statusColor: n.statusColor,
-            fieldSections: n.fieldSections, recordCreated: n.recordCreated,
-            lastUpdate: n.lastUpdate, createdByName: n.createdByName,
-            templateColor: templateColors[n.template] || null,
-            nodeX: n.x, nodeY: n.y,
-          })
-        }
       } else {
         // Empty space — start canvas pan
         panRef.current = { lastX: sx, lastY: sy }
@@ -234,14 +223,54 @@ export function usePhysics(records) {
       cam.zoom = newZoom
     }
 
+    const onDblClick = (e) => {
+      const rect = canvas.getBoundingClientRect()
+      const sx = e.clientX - rect.left
+      const sy = e.clientY - rect.top
+      const { x: mx, y: my } = screenToWorld(sx, sy)
+      const HIT = 12
+      let closest = null
+      let closestDist = HIT
+      for (let i = 0; i < nodes.length; i++) {
+        const dx = nodes[i].x - mx
+        const dy = nodes[i].y - my
+        const d = Math.sqrt(dx * dx + dy * dy)
+        if (d < closestDist) { closestDist = d; closest = i }
+      }
+      if (closest !== null) {
+        const n = nodes[closest]
+        if (pinnedIndicesRef.current.has(closest)) {
+          pinnedIndicesRef.current.delete(closest)
+          setPinnedRecords(prev => prev.filter(p => p.sid !== n.sid))
+        } else {
+          const rec = {
+            _pinId: `${n.sid}-${Date.now()}`,
+            _pos: { ...hoveredPosRef.current },
+            sid: n.sid, templateLabel: n.templateLabel, recordLabel: n.recordLabel,
+            statusLabel: n.statusLabel, statusColor: n.statusColor,
+            fieldSections: n.fieldSections, recordCreated: n.recordCreated,
+            lastUpdate: n.lastUpdate, createdByName: n.createdByName,
+            containerLabel: n.containerLabel, containerLevelLabel: n.containerLevelLabel,
+            templateColor: templateColors[n.template] || null,
+            nodeX: n.x, nodeY: n.y,
+          }
+          pinnedIndicesRef.current.add(closest)
+          setPinnedRecords(prev => [...prev, rec])
+          setHoveredRecord(null)
+          hoveredIdxRef.current = null
+        }
+      }
+    }
+
     canvas.addEventListener('mousemove', onMouseMove)
     canvas.addEventListener('mouseleave', onMouseLeave)
     canvas.addEventListener('mousedown', onMouseDown)
     canvas.addEventListener('mouseup', onMouseUp)
+    canvas.addEventListener('dblclick', onDblClick)
     canvas.addEventListener('wheel', onWheel, { passive: false })
 
-    const ALPHA_DECAY = 0.005
-    const ALPHA_MIN = 0.001
+    const ALPHA_DECAY = 0.002
+    const ALPHA_MIN = 0.0001
 
     const draw = () => {
       ctx.clearRect(0, 0, w, h)
@@ -281,7 +310,7 @@ export function usePhysics(records) {
           cx /= indices.length; cy /= indices.length
 
           // Centroid pull
-          const kCentroid = (inh * 0.015 + attr * 0.03)
+          const kCentroid = (inh * 0.006 + attr * 0.012)
           for (const i of indices) {
             const dx = cx - nodes[i].x
             const dy = cy - nodes[i].y
@@ -290,7 +319,7 @@ export function usePhysics(records) {
           }
 
           // Pairwise attraction within template
-          const kPair = 0.003 * (1 + inh + attr)
+          const kPair = 0.001 * (1 + inh + attr)
           for (let a = 0; a < indices.length; a++) {
             for (let b = a + 1; b < indices.length; b++) {
               const ni = nodes[indices[a]], nj = nodes[indices[b]]
@@ -383,29 +412,30 @@ export function usePhysics(records) {
         const isHovered = mouseActive && Math.sqrt(dx * dx + dy * dy) < HIT_R
         if (isHovered) newHoveredIdx = i
         ctx.beginPath()
-        ctx.arc(n.x, n.y, isHovered ? n.r + 2 : n.r, 0, Math.PI * 2)
+        ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2)
         ctx.fillStyle = isHovered ? `rgba(${cr}, ${cg}, ${cb}, 1)` : `rgba(${cr}, ${cg}, ${cb}, 0.8)`
         ctx.fill()
         if (n.sid) {
+          ctx.font = '5px system-ui, sans-serif'
           ctx.fillStyle = `rgba(${cr}, ${cg}, ${cb}, 0.6)`
           ctx.fillText(n.sid, n.x + n.r + 4, n.y)
+          ctx.font = '11px system-ui, sans-serif'
         }
       }
 
       if (newHoveredIdx !== hoveredIdxRef.current) {
-        hoveredIdxRef.current = newHoveredIdx
-        if (newHoveredIdx !== null) {
+        if (newHoveredIdx !== null && !pinnedIndicesRef.current.has(newHoveredIdx)) {
+          hoveredIdxRef.current = newHoveredIdx
           const n = nodes[newHoveredIdx]
           setHoveredRecord({
             sid: n.sid, templateLabel: n.templateLabel, recordLabel: n.recordLabel,
             statusLabel: n.statusLabel, statusColor: n.statusColor,
             fieldSections: n.fieldSections, recordCreated: n.recordCreated,
             lastUpdate: n.lastUpdate, createdByName: n.createdByName,
+            containerLabel: n.containerLabel, containerLevelLabel: n.containerLevelLabel,
             templateColor: templateColors[n.template] || null,
             nodeX: n.x, nodeY: n.y,
           })
-        } else {
-          setHoveredRecord(null)
         }
       }
 
@@ -444,15 +474,17 @@ export function usePhysics(records) {
       canvas.removeEventListener('mouseleave', onMouseLeave)
       canvas.removeEventListener('mousedown', onMouseDown)
       canvas.removeEventListener('mouseup', onMouseUp)
+      canvas.removeEventListener('dblclick', onDblClick)
       canvas.removeEventListener('wheel', onWheel)
     }
   }, [records])
 
   return {
     canvasRef,
-    hoveredRecord,
-    pinnedRecord, setPinnedRecord,
-    pinnedIdxRef,
+    hoveredRecord, setHoveredRecord,
+    pinnedRecords, setPinnedRecords,
+    pinnedIndicesRef,
+    hoveredPosRef,
     attraction, setAttraction,
     repulsion, setRepulsion,
     inherentAttraction, setInherentAttraction,

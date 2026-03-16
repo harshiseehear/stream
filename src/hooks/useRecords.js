@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { fetchUserNames } from '../api/cell/users'
-import { fetchModuleTemplates, fetchDefinition, fetchInstances } from '../api/cell/records'
+import { fetchModuleTemplates, fetchDefinition, fetchInstances, fetchUserContainers, fetchHierarchyLevels } from '../api/cell/records'
 import { formatFieldValue, setUserCache, getUserName } from '../utils/formatFieldValue'
 
 const MODULE_SEQ = 23
@@ -19,8 +19,13 @@ export function useRecords() {
       })
       .catch(err => console.warn('[useRecords] fetchUserNames failed:', err))
       .then(() => fetchModuleTemplates(MODULE_SEQ))
-      .then(templates =>
-        Promise.all(
+      .then(templates => {
+        return fetchHierarchyLevels()
+          .then(levels => ({ templates, containerLevelLabel: levels.length > 0 ? levels[levels.length - 1].label : 'Container' }))
+          .catch(() => ({ templates, containerLevelLabel: 'Container' }))
+      })
+      .then(({ templates, containerLevelLabel }) => {
+        return Promise.all(
           templates.map(t => {
             const tLabel = t.recordLabel ?? t.label ?? t.name ?? ''
             const tCode = t.recordCode ?? ''
@@ -28,7 +33,12 @@ export function useRecords() {
             return Promise.all([
               fetchDefinition(t.uuid),
               fetchInstances(t.uuid),
-            ]).then(([defData, instances]) => {
+              fetchUserContainers(t.uuid),
+            ]).then(([defData, instances, containers]) => {
+              const containerMap = {}
+              for (const c of containers) {
+                containerMap[c.uuid] = c.hierarchyNodeLabel
+              }
               const def = defData?.data ?? defData
 
               const sections = []
@@ -44,6 +54,17 @@ export function useRecords() {
                 if (secFields.length > 0) {
                   sections.push({ sectionLabel: sec.sectionLabel ?? '', sectionUuid: sec.uuid ?? '', fields: secFields })
                 }
+              }
+
+              let recordKeyUuid = null
+              for (const sec of (def?.recordSectionDef ?? [])) {
+                for (const fd of (sec.sectionFieldsDef ?? [])) {
+                  if (fd.type !== 'TASK_DEF' && fd.attributes?.recordKey && fd.uuid) {
+                    recordKeyUuid = fd.uuid
+                    break
+                  }
+                }
+                if (recordKeyUuid) break
               }
 
               const statusDefs = {}
@@ -81,6 +102,14 @@ export function useRecords() {
                 const createdActorId = inst.recordCreatedActorId ?? inst.recordCreatedActor?.id ?? null
                 const createdByName = createdActorId != null ? getUserName(createdActorId) : null
 
+                let recordKeyValue = ''
+                if (recordKeyUuid) {
+                  const raw = resps['field' + recordKeyUuid]
+                  if (raw !== undefined && raw !== null) {
+                    recordKeyValue = formatFieldValue(raw) ?? ''
+                  }
+                }
+
                 return {
                   sid,
                   uuid: inst.uuid ?? '',
@@ -93,12 +122,16 @@ export function useRecords() {
                   recordCreated: inst.recordCreated ?? '',
                   lastUpdate: inst.lastUpdate ?? '',
                   createdByName: createdByName ?? '',
+                  containerUUID: inst.containerUUID ?? '',
+                  containerLabel: containerMap[inst.containerUUID] ?? '',
+                  containerLevelLabel,
+                  recordKeyValue,
                 }
               })
             }).catch(() => [])
           })
         )
-      )
+      })
       .then(nested => setRecords(nested.flat()))
       .catch(() => setRecords([]))
   }, [])

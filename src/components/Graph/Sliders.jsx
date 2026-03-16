@@ -3,12 +3,12 @@ export default function Sliders({
   repulsion, setRepulsion,
   inherentAttraction, setInherentAttraction,
 }) {
-  const sliderStyle = { width: 100 }
-  const labelStyle = { display: 'flex', alignItems: 'center', gap: 8 }
+  const sliderStyle = { width: 100, accentColor: 'var(--text-secondary)' }
+  const labelStyle = { display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-secondary)' }
   const numStyle = { width: 28, textAlign: 'right' }
 
   return (
-    <>
+    <div style={{ paddingBottom: 8 }}>
       <label style={labelStyle}>
         attraction
         <input type="range" min="0" max="1" step="0.01" value={attraction}
@@ -27,6 +27,6 @@ export default function Sliders({
           onChange={e => setInherentAttraction(+e.target.value)} style={sliderStyle} />
         <span style={numStyle}>{inherentAttraction.toFixed(2)}</span>
       </label>
-    </>
+    </div>
   )
 }

@@ -1,28 +1,36 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useLayoutEffect } from 'react'
 import StatusBadge from './StatusBadge'
 import TimestampDisplay from './TimestampDisplay'
 import FieldSection from './FieldSection'
 import { recordDetailFallback } from '../../theme/colors'
 
-export default function RecordDetails({ record, onUnpin }) {
+export default function RecordDetails({ record, onPin, onUnpin, onClose, onCollapse, pinned, initialPos, initialCollapsed, onDragEnd, onBringToFront }) {
   if (!record) return null
 
-  const [collapsed, setCollapsed] = useState(false)
-  const [pos, setPos] = useState({ x: 16, y: 368 })
-  const [size, setSize] = useState({ w: 280, h: 380 })
+  const [collapsed, setCollapsed] = useState(!!initialCollapsed)
+  const [pos, setPos] = useState(initialPos || { x: 16, y: 368 })
+  const [size, setSize] = useState({ w: 320, h: 380 })
   const dragRef = useRef(null)
   const resizeRef = useRef(null)
 
+  useLayoutEffect(() => {
+    if (!pinned && initialPos) {
+      setPos(initialPos)
+    }
+  }, [initialPos?.x, initialPos?.y, pinned])
+
   const onHeaderMouseDown = useCallback((e) => {
-    if (e.detail === 2) return // let dblclick handle it
+    if (e.detail === 2) return
     e.preventDefault()
+    if (onBringToFront) onBringToFront()
     const startX = e.clientX - pos.x
     const startY = e.clientY - pos.y
-    const onMove = (ev) => setPos({ x: ev.clientX - startX, y: ev.clientY - startY })
-    const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
+    let lastPos = { x: pos.x, y: pos.y }
+    const onMove = (ev) => { lastPos = { x: ev.clientX - startX, y: ev.clientY - startY }; setPos(lastPos) }
+    const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); if (onDragEnd) onDragEnd(lastPos) }
     window.addEventListener('mousemove', onMove)
     window.addEventListener('mouseup', onUp)
-  }, [pos])
+  }, [pos, onDragEnd, onBringToFront])
 
   const onResizeMouseDown = useCallback((e) => {
     e.preventDefault()
@@ -49,46 +57,71 @@ export default function RecordDetails({ record, onUnpin }) {
   const borderColor = `rgba(${cr}, ${cg}, ${cb}, 0.25)`
 
   return (
-    <div style={{
+    <div
+      onMouseDown={() => { if (onBringToFront) onBringToFront() }}
+      style={{
       position: 'absolute',
       left: pos.x,
       top: pos.y,
       background: bgColor,
-      borderRadius: 3,
-      width: size.w,
-      ...(collapsed ? {} : { height: size.h }),
+      borderRadius: collapsed ? 999 : 3,
+      ...(collapsed ? {} : { width: size.w, height: size.h }),
       overflow: 'hidden',
       fontSize: 11,
       lineHeight: 1.5,
       color: textColor,
       border: `1px solid ${borderColor}`,
       fontFamily: 'system-ui, -apple-system, sans-serif',
-      opacity: 0.75,
+      opacity: pinned ? 0.9 : 0.75,
+      transition: 'border-radius 0.15s ease',
     }}>
       {/* Sticky header bar — drag to move, dblclick to collapse */}
       <div
         onMouseDown={onHeaderMouseDown}
-        onDoubleClick={() => setCollapsed(c => !c)}
+        onDoubleClick={() => {
+          if (!pinned && onCollapse) {
+            onCollapse()
+          } else {
+            setCollapsed(c => !c)
+          }
+        }}
         style={{
-          padding: '6px 10px',
+          padding: collapsed ? '4px 12px' : '6px 10px',
           display: 'flex',
           alignItems: 'center',
           gap: 6,
           cursor: 'grab',
           userSelect: 'none',
+          whiteSpace: 'nowrap',
         }}
       >
-        {record.templateLabel && (
-          <span style={{ fontWeight: 700, fontSize: 12, color: textColor }}>{record.templateLabel}</span>
-        )}
-        <span style={{ fontSize: 10, color: subtleColor, fontWeight: 500 }}>{record.sid}</span>
-        <StatusBadge label={record.statusLabel} color={record.statusColor} />
-        {onUnpin && (
-          <span
-            style={{ marginLeft: 'auto', cursor: 'pointer', opacity: 0.5, fontSize: 10, lineHeight: 1, color: textColor }}
-            onClick={onUnpin}
-            title="Unpin"
-          >✕</span>
+        {collapsed ? (
+          <span style={{ fontSize: 11, fontWeight: 600, color: textColor }}>{record.sid}</span>
+        ) : (
+          <>
+            {record.templateLabel && (
+              <span style={{ fontWeight: 700, fontSize: 12, color: textColor }}>{record.templateLabel}</span>
+            )}
+            <span style={{ fontSize: 10, color: subtleColor, fontWeight: 500 }}>{record.sid}</span>
+            <StatusBadge label={record.statusLabel} color={record.statusColor} />
+            <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4 }}>
+              {(onPin || onUnpin) && (
+                <svg
+                  width="14" height="14" viewBox="0 0 24 24" fill={textColor}
+                  style={{ opacity: pinned ? 0.85 : 0.25, cursor: 'pointer' }}
+                  onClick={(e) => { e.stopPropagation(); pinned ? onUnpin?.() : onPin?.() }}
+                  title={pinned ? 'Unpin' : 'Pin'}
+                >
+                  <path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z" />
+                </svg>
+              )}
+              <span
+                style={{ cursor: 'pointer', opacity: 0.6, fontSize: 12, lineHeight: 1, color: textColor }}
+                onClick={(e) => { e.stopPropagation(); onClose?.() }}
+                title="Close"
+              >✕</span>
+            </span>
+          </>
         )}
       </div>
 
@@ -105,7 +138,7 @@ export default function RecordDetails({ record, onUnpin }) {
             <div style={{ opacity: 0.4, fontStyle: 'italic' }}>No fields</div>
           )}
 
-          <TimestampDisplay createdByName={record.createdByName} recordCreated={record.recordCreated} lastUpdate={record.lastUpdate} color={subtleColor} />
+          <TimestampDisplay createdByName={record.createdByName} recordCreated={record.recordCreated} lastUpdate={record.lastUpdate} color={subtleColor} containerLabel={record.containerLabel} containerLevelLabel={record.containerLevelLabel} />
         </div>
       )}
 

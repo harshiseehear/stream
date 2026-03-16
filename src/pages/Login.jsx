@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { login } from '../api/cell/auth'
-import { bgPage, brandAccent, textPrimary, colorError } from '../theme/colors'
+import { bgPage, brandAccent, textPrimary, colorError, textSecondary } from '../theme/colors'
+import ThemeToggle from '../components/ThemeToggle'
 
 export default function Login() {
   const [username, setUsername] = useState('')
@@ -109,6 +110,17 @@ export default function Login() {
             }}
           >{loading ? '...' : 'enter'}</button>
         </div>
+      </div>
+
+      <div style={{
+        position: 'absolute',
+        bottom: 16,
+        right: 16,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+      }}>
+        <ThemeToggle />
       </div>
     </div>
   )

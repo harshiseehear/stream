@@ -1,0 +1,18 @@
+export default {
+  '--bg-page': '#f5f5dc',
+  '--text-primary': '#333',
+  '--text-secondary': '#7a6a5a',
+  '--text-placeholder': '#b0a090',
+  '--brand-accent': '#c8a97a',
+  '--border-panel': '#8b7355',
+  '--color-control': '#a0856e',
+  '--control-active-bg': 'rgba(139, 115, 85, 0.15)',
+  '--color-error': '#c44',
+  '--dropdown-bg': '#fff',
+  '--dropdown-border': '#ccc',
+  '--dropdown-shadow': '0 2px 8px rgba(0,0,0,0.12)',
+  '--dropdown-hover-bg': '#ede4d3',
+  '--dropdown-text': '#333',
+  '--status-badge-fallback-bg': 'rgba(160,133,110,0.12)',
+  '--status-badge-fallback-border': 'rgba(160,133,110,0.2)',
+}

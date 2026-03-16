@@ -1,27 +1,45 @@
 import { useMemo } from 'react'
 
-const TOP_LEVEL_FIELDS = [
+const STATIC_TOP_FIELDS = [
   { key: 'templateLabel', label: 'Template', category: 'selection' },
   { key: 'statusLabel', label: 'Status', category: 'selection' },
   { key: 'recordLabel', label: 'Record Label', category: 'text' },
   { key: 'sid', label: 'SID', category: 'text' },
+]
+
+const STATIC_BOTTOM_FIELDS = [
   { key: 'createdByName', label: 'Created By', category: 'selection' },
   { key: 'recordCreated', label: 'Date Created', category: 'date' },
   { key: 'lastUpdate', label: 'Last Updated', category: 'date' },
 ]
+
+function isUserFieldType(fieldType) {
+  const ft = (fieldType || '').toUpperCase()
+  return ft === 'USER' || ft === 'USERS' || ft === 'ACTOR'
+}
 
 function fieldTypeToCategory(fieldType) {
   const ft = (fieldType || '').toUpperCase()
   if (ft === 'NUMBER' || ft === 'DECIMAL' || ft === 'CURRENCY' || ft === 'PERCENT') return 'number'
   if (ft === 'DATE' || ft === 'DATETIME' || ft === 'TIME') return 'date'
   if (ft === 'SELECTION' || ft === 'DROPDOWN' || ft === 'SELECT') return 'selection'
-  if (ft === 'USER' || ft === 'USERS' || ft === 'ACTOR') return 'selection'
+  if (isUserFieldType(fieldType)) return 'selection'
   if (ft === 'BOOLEAN' || ft === 'CHECKBOX') return 'selection'
   return 'text'
 }
 
+function getTopLevelFields(records) {
+  const containerLevelLabel = records?.find(r => r.containerLevelLabel)?.containerLevelLabel || 'Container'
+  return [
+    ...STATIC_TOP_FIELDS,
+    { key: 'containerLabel', label: containerLevelLabel, category: 'selection' },
+    ...STATIC_BOTTOM_FIELDS,
+  ]
+}
+
 export function getAvailableFields(records) {
-  if (!records || records.length === 0) return TOP_LEVEL_FIELDS
+  const topLevel = getTopLevelFields(records)
+  if (!records || records.length === 0) return topLevel
 
   const dynamicFieldMap = new Map()
   for (const rec of records) {
@@ -32,13 +50,14 @@ export function getAvailableFields(records) {
             key: `field::${f.name}`,
             label: f.name,
             category: fieldTypeToCategory(f.fieldType),
+            fieldType: f.fieldType,
           })
         }
       }
     }
   }
 
-  return [...TOP_LEVEL_FIELDS, ...dynamicFieldMap.values()]
+  return [...topLevel, ...dynamicFieldMap.values()]
 }
 
 export function getFieldMeta(fields, fieldKey) {
@@ -59,12 +78,33 @@ function resolveFieldValue(record, fieldKey) {
   return record[fieldKey] ?? ''
 }
 
+function detectUserField(records, fieldKey) {
+  if (!fieldKey.startsWith('field::')) return false
+  const name = fieldKey.slice(7)
+  for (const rec of records) {
+    for (const sec of rec.fieldSections) {
+      for (const f of sec.fields) {
+        if (f.name === name) return isUserFieldType(f.fieldType)
+      }
+    }
+  }
+  return false
+}
+
 export function getPossibleValues(records, fieldKey) {
   if (!records || !fieldKey) return []
+  const isUser = detectUserField(records, fieldKey)
   const values = new Set()
   for (const rec of records) {
     const val = resolveFieldValue(rec, fieldKey)
-    if (val !== '' && val !== null && val !== undefined) values.add(String(val))
+    if (val !== '' && val !== null && val !== undefined) {
+      const strVal = String(val)
+      if (isUser && strVal.includes(', ')) {
+        strVal.split(', ').forEach(v => { if (v.trim()) values.add(v.trim()) })
+      } else {
+        values.add(strVal)
+      }
+    }
   }
   return [...values].sort()
 }
@@ -130,11 +170,16 @@ function matchesRule(record, rule) {
 
   switch (rule.operator) {
     case 'equals':
-    case 'is':
-      return val === target
+    case 'is': {
+      if (val === target) return true
+      if (val.includes(', ')) return val.split(', ').some(p => p.trim().toLowerCase() === target)
+      return false
+    }
     case 'does_not_equal':
-    case 'is_not':
+    case 'is_not': {
+      if (val.includes(', ')) return !val.split(', ').some(p => p.trim().toLowerCase() === target)
       return val !== target
+    }
     case 'contains':
       return val.includes(target)
     case 'does_not_contain':
@@ -149,11 +194,19 @@ function matchesRule(record, rule) {
       return val.trim() !== ''
     case 'is_any_of': {
       const arr = Array.isArray(rule.value) ? rule.value : []
-      return arr.some(v => String(v).toLowerCase() === val)
+      const parts = val.includes(', ') ? val.split(', ').map(p => p.trim().toLowerCase()) : [val]
+      return arr.some(v => {
+        const t = String(v).toLowerCase()
+        return parts.some(p => p === t)
+      })
     }
     case 'is_none_of': {
       const arr = Array.isArray(rule.value) ? rule.value : []
-      return !arr.some(v => String(v).toLowerCase() === val)
+      const parts = val.includes(', ') ? val.split(', ').map(p => p.trim().toLowerCase()) : [val]
+      return !arr.some(v => {
+        const t = String(v).toLowerCase()
+        return parts.some(p => p === t)
+      })
     }
     case 'greater_than':
       return parseFloat(val) > parseFloat(target)

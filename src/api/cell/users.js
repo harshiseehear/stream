@@ -1,7 +1,6 @@
 import { authFetchSafe } from '../client'
 
 const SCINT_API = '/proxy/scint'
-const RECORDS_API = '/proxy/records'
 
 function decodeJwtPayload() {
   try {
@@ -38,32 +37,17 @@ function parseUsers(data) {
 
 export async function fetchUserNames() {
   const jwt = decodeJwtPayload()
-  console.log('[fetchUserNames] JWT payload:', jwt)
   const custId = jwt?.cid ?? jwt?.customerId ?? jwt?.customer_id ?? ''
-
-  const endpoints = [
-    `${SCINT_API}/user/names`,
-    `${SCINT_API}/user/all`,
-    `${SCINT_API}/users`,
-    ...(custId ? [
-      `${SCINT_API}/user/names/${custId}`,
-      `${SCINT_API}/user/all/${custId}`,
-      `${SCINT_API}/users/${custId}`,
-    ] : []),
-    `${RECORDS_API}/users`,
-    `${RECORDS_API}/user/names`,
-  ]
-  for (const url of endpoints) {
-    const data = await authFetchSafe(url)
-    if (data != null) {
-      console.log('[fetchUserNames] hit on', url, typeof data, Array.isArray(data) ? `(array len ${data.length})` : '')
-      const cache = parseUsers(data)
-      if (cache) {
-        console.log('[fetchUserNames] resolved', Object.keys(cache).length, 'users')
-        return cache
-      }
-    }
+  if (!custId) {
+    console.warn('[fetchUserNames] no customer ID in JWT')
+    return {}
   }
-  console.warn('[fetchUserNames] all endpoints returned no usable data')
+
+  const data = await authFetchSafe(`${SCINT_API}/users/${custId}`)
+  if (data != null) {
+    const cache = parseUsers(data)
+    if (cache) return cache
+  }
+  console.warn('[fetchUserNames] failed to load users')
   return {}
 }

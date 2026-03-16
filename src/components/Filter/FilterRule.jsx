@@ -1,6 +1,7 @@
-import { useMemo, useState, useRef, useEffect } from 'react'
+import { useMemo, useState, useRef, useEffect, useLayoutEffect } from 'react'
 import FilterDropdown from './FilterDropdown'
 import FilterInput from './FilterInput'
+import DatePicker from './DatePicker'
 import {
   getFieldMeta,
   getOperators,
@@ -9,7 +10,7 @@ import {
   isMultiValueOperator,
   isDropdownOperator,
 } from '../../hooks/useFilteredRecords'
-import { borderPanel, textSecondary, controlActiveBackground, dropdownBg, dropdownBorder, dropdownShadow, dropdownHoverBg, dropdownText } from '../../theme/colors'
+import { bgPage, borderPanel, textSecondary, controlActiveBackground, dropdownHoverBg, dropdownText } from '../../theme/colors'
 
 const rowStyle = {
   display: 'flex',
@@ -112,6 +113,12 @@ export default function FilterRule({ rule, fields, records, onChange, onRemove, 
               placeholder="Value"
             />
           )
+        ) : category === 'date' ? (
+          <DatePicker
+            value={rule.value}
+            onChange={onValueChange}
+            placeholder="Date"
+          />
         ) : (
           <FilterInput
             value={rule.value}
@@ -167,13 +174,45 @@ function ConjunctionCircle({ label, active, onClick }) {
 function MultiSelect({ values, options, onToggle }) {
   const available = options.filter(opt => !values.includes(opt))
   const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState('')
   const ref = useRef(null)
+  const inputRef = useRef(null)
+  const dropRef = useRef(null)
+
+  const filtered = useMemo(() => {
+    if (!search) return available
+    const q = search.toLowerCase()
+    return available.filter(opt => opt.toString().toLowerCase().includes(q))
+  }, [available, search])
 
   useEffect(() => {
     if (!open) return
     const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
+  }, [open])
+
+  useEffect(() => {
+    if (open) {
+      setSearch('')
+      setTimeout(() => inputRef.current?.focus(), 0)
+    }
+  }, [open])
+
+  useLayoutEffect(() => {
+    if (!open || !dropRef.current || !ref.current) return
+    const triggerRect = ref.current.getBoundingClientRect()
+    const el = dropRef.current
+    let top = triggerRect.bottom + 4
+    let left = triggerRect.left
+    if (top + el.offsetHeight > window.innerHeight - 8) {
+      top = Math.max(8, triggerRect.top - el.offsetHeight - 4)
+    }
+    if (left + el.offsetWidth > window.innerWidth - 8) {
+      left = Math.max(8, window.innerWidth - el.offsetWidth - 8)
+    }
+    el.style.top = top + 'px'
+    el.style.left = left + 'px'
   }, [open])
 
   return (
@@ -239,40 +278,62 @@ function MultiSelect({ values, options, onToggle }) {
             +
           </button>
           {open && (
-            <div style={{
-              position: 'absolute',
-              top: '100%',
-              left: 0,
-              marginTop: 4,
-              background: dropdownBg,
-              border: `1px solid ${dropdownBorder}`,
-              borderRadius: 6,
-              padding: 4,
-              zIndex: 100,
-              maxHeight: 150,
-              overflowY: 'auto',
-              minWidth: 120,
-              boxShadow: dropdownShadow,
+            <div ref={dropRef} style={{
+              position: 'fixed',
+              background: bgPage,
+              border: `1px solid ${borderPanel}`,
+              borderRadius: 10,
+              padding: 6,
+              zIndex: 9999,
+              maxHeight: 220,
+              minWidth: 160,
+              boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+              display: 'flex',
+              flexDirection: 'column',
             }}>
-              {available.map(opt => (
-                <div
-                  key={opt}
-                  onClick={() => { onToggle(opt); setOpen(false) }}
-                  style={{
-                    padding: '4px 8px',
-                    fontSize: 11,
-                    fontFamily: 'system-ui, sans-serif',
-                    color: dropdownText,
-                    cursor: 'pointer',
-                    borderRadius: 4,
-                    whiteSpace: 'nowrap',
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.background = dropdownHoverBg}
-                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                >
-                  {opt}
-                </div>
-              ))}
+              <input
+                ref={inputRef}
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder=""
+                style={{
+                  border: `1px solid ${borderPanel}`,
+                  borderRadius: 6,
+                  padding: '4px 8px',
+                  fontSize: 11,
+                  fontFamily: 'system-ui, sans-serif',
+                  outline: 'none',
+                  marginBottom: 4,
+                  background: 'transparent',
+                  color: dropdownText,
+                }}
+              />
+              <div style={{ overflowY: 'auto', maxHeight: 160 }}>
+                {filtered.map(opt => (
+                  <div
+                    key={opt}
+                    onClick={() => { onToggle(opt); setOpen(false) }}
+                    style={{
+                      padding: '4px 8px',
+                      fontSize: 11,
+                      fontFamily: 'system-ui, sans-serif',
+                      color: dropdownText,
+                      cursor: 'pointer',
+                      borderRadius: 4,
+                      whiteSpace: 'nowrap',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = dropdownHoverBg}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  >
+                    {opt}
+                  </div>
+                ))}
+                {filtered.length === 0 && (
+                  <div style={{ padding: '4px 8px', fontSize: 11, color: textSecondary, fontFamily: 'system-ui, sans-serif' }}>
+                    No matches
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
