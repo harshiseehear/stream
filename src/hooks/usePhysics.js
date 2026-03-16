@@ -464,7 +464,37 @@ export function usePhysics(records) {
       ctx.translate(cam.x, cam.y)
       ctx.scale(cam.zoom, cam.zoom)
 
-      if (hoveredTemplate && centroids[hoveredTemplate]) {
+      // Focus mode: only show focused nodes + their direct neighbors
+      const focused = focusedSidsRef.current
+      const inFocusMode = focused.size > 0
+      let visibleIdxSet = null
+      let focusedIdxSet = null
+      if (inFocusMode) {
+        visibleIdxSet = new Set()
+        focusedIdxSet = new Set()
+        const blAdj = backlinkAdjRef.current
+        for (let i = 0; i < nodes.length; i++) {
+          if (focused.has(nodes[i].sid)) {
+            visibleIdxSet.add(i)
+            focusedIdxSet.add(i)
+            const linked = blAdj[i]
+            if (linked) for (const li of linked) visibleIdxSet.add(li)
+          }
+        }
+      }
+
+      // Initialize or resize fade alpha array
+      if (!fadeAlphaRef.current || fadeAlphaRef.current.length !== nodes.length) {
+        fadeAlphaRef.current = new Float32Array(nodes.length).fill(1.0)
+      }
+      const fadeAlpha = fadeAlphaRef.current
+      for (let i = 0; i < nodes.length; i++) {
+        const target = (visibleIdxSet && !visibleIdxSet.has(i)) ? 0.0 : 1.0
+        fadeAlpha[i] += (target - fadeAlpha[i]) * 0.08
+      }
+
+      // Template lines — skip in focus mode
+      if (!inFocusMode && hoveredTemplate && centroids[hoveredTemplate]) {
         const { cx, cy } = centroids[hoveredTemplate]
         const [cr, cg, cb] = templateColors[hoveredTemplate] || templateColorFallback
         ctx.strokeStyle = `rgba(${cr}, ${cg}, ${cb}, 0.35)`
@@ -474,8 +504,8 @@ export function usePhysics(records) {
         }
       }
 
-      // Persistent backlink lines for active (pinned/hovered) stickies
-      {
+      // Persistent backlink lines for active (pinned/hovered) stickies — skip in focus mode
+      if (!inFocusMode) {
         const active = activeSidsRef.current
         if (active.size > 0) {
           const blAdj = backlinkAdjRef.current
@@ -497,8 +527,8 @@ export function usePhysics(records) {
         }
       }
 
-      // Draw backlink lines for hovered node (on top of persistent lines)
-      {
+      // Draw backlink lines for hovered node — skip in focus mode
+      if (!inFocusMode) {
         let blHovIdx = null
         if (mouseActive) {
           for (let i = 0; i < nodes.length; i++) {
@@ -523,29 +553,23 @@ export function usePhysics(records) {
         }
       }
 
-      // Focus mode: compute visible index set + fade alphas
-      const focused = focusedSidsRef.current
-      let visibleIdxSet = null
-      if (focused.size > 0) {
-        visibleIdxSet = new Set()
+      // Draw focus-mode connection lines (only from focused nodes to their direct neighbors)
+      if (inFocusMode && focusedIdxSet) {
         const blAdj = backlinkAdjRef.current
-        for (let i = 0; i < nodes.length; i++) {
-          if (focused.has(nodes[i].sid)) {
-            visibleIdxSet.add(i)
-            const linked = blAdj[i]
-            if (linked) for (const li of linked) visibleIdxSet.add(li)
+        for (const fi of focusedIdxSet) {
+          const linked = blAdj[fi]
+          if (!linked || linked.length === 0) continue
+          const src = nodes[fi]
+          ctx.strokeStyle = 'rgba(180, 180, 180, 0.25)'
+          ctx.lineWidth = 1
+          for (const li of linked) {
+            const tgt = nodes[li]
+            ctx.beginPath()
+            ctx.moveTo(src.x, src.y)
+            ctx.lineTo(tgt.x, tgt.y)
+            ctx.stroke()
           }
         }
-      }
-
-      // Initialize or resize fade alpha array
-      if (!fadeAlphaRef.current || fadeAlphaRef.current.length !== nodes.length) {
-        fadeAlphaRef.current = new Float32Array(nodes.length).fill(1.0)
-      }
-      const fadeAlpha = fadeAlphaRef.current
-      for (let i = 0; i < nodes.length; i++) {
-        const target = (visibleIdxSet && !visibleIdxSet.has(i)) ? 0.05 : 1.0
-        fadeAlpha[i] += (target - fadeAlpha[i]) * 0.08
       }
 
       const active = activeSidsRef.current
@@ -567,12 +591,12 @@ export function usePhysics(records) {
         ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2)
         ctx.fillStyle = `rgba(${cr}, ${cg}, ${cb}, ${nodeAlpha})`
         ctx.fill()
-        // Yellow ring for active (pinned/hovered) nodes
+        // White ring for active (pinned/hovered) nodes
         if (active.has(n.sid)) {
-          ctx.strokeStyle = `rgba(255, 215, 0, ${0.9 * fa})`
+          ctx.strokeStyle = `rgba(255, 255, 255, ${0.9 * fa})`
           ctx.lineWidth = 2
           ctx.beginPath()
-          ctx.arc(n.x, n.y, n.r + 2, 0, Math.PI * 2)
+          ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2)
           ctx.stroke()
         }
         if (n.sid) {

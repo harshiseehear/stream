@@ -16,7 +16,7 @@ export default function Home() {
   const navigate = useNavigate()
   const records = useRecords()
   const [filterRules, setFilterRules] = useState([])
-  const [conjunction, setConjunction] = useState('and')
+  const [conjunctions, setConjunctions] = useState([])
   const [searchVisible, setSearchVisible] = useState(false)
   const closeSearch = useCallback(() => setSearchVisible(false), [])
 
@@ -30,7 +30,7 @@ export default function Home() {
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [])
-  const filteredRecords = useFilteredRecords(records, filterRules, conjunction)
+  const filteredRecords = useFilteredRecords(records, filterRules, conjunctions)
 
   const {
     canvasRef,
@@ -101,7 +101,7 @@ export default function Home() {
   }
   prevHoveredRef.current = hoveredRecord
 
-  const filterPanel = FilterPanel({ records, rules: filterRules, conjunction, onConjunctionChange: setConjunction, onChange: setFilterRules })
+  const filterPanel = FilterPanel({ records, rules: filterRules, conjunctions, onConjunctionsChange: setConjunctions, onChange: setFilterRules })
 
   return (
     <div style={{
@@ -162,15 +162,11 @@ export default function Home() {
           justifyContent: 'center',
           pointerEvents: 'none',
         }}>
-          <div style={{
-            width: 24,
-            height: 24,
-            border: `2px solid ${textSecondary}`,
-            borderTopColor: 'transparent',
-            borderRadius: '50%',
-            animation: 'spin 0.8s linear infinite',
-          }} />
-          <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+          <svg width="32" height="32" viewBox="0 0 32 32" style={{ animation: 'orbit-spin 1.2s linear infinite' }}>
+            <circle cx="16" cy="16" r="12" fill="none" stroke={textSecondary} strokeWidth="1.5" opacity="0.45" />
+            <circle cx="16" cy="4" r="2.5" fill={textSecondary} />
+          </svg>
+          <style>{`@keyframes orbit-spin { to { transform: rotate(360deg) } }`}</style>
         </div>
       )}
 

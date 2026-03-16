@@ -43,3 +43,27 @@ input[type=range]::-moz-range-thumb {
   background: var(--color-control);
   border: none;
 }
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-control, #888);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-secondary, #aaa);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-control, #888) transparent;
+}

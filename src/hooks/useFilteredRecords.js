@@ -221,17 +221,31 @@ function matchesRule(record, rule) {
   }
 }
 
-export function useFilteredRecords(records, rules, conjunction = 'and') {
+export function useFilteredRecords(records, rules, conjunctions = []) {
   return useMemo(() => {
     if (!records || rules.length === 0) return records
-    const activeRules = rules.filter(r => r.field && r.operator && (
+    // Build pairs of {rule, conjunctionAfter} preserving original indices
+    const indexed = rules.map((r, i) => ({ rule: r, idx: i }))
+    const active = indexed.filter(({ rule: r }) => r.field && r.operator && (
       !needsValueInput(r.operator) ||
       (Array.isArray(r.value) ? r.value.length > 0 : r.value !== '')
     ))
-    if (activeRules.length === 0) return records
-    if (conjunction === 'or') {
-      return records.filter(record => activeRules.some(rule => matchesRule(record, rule)))
-    }
-    return records.filter(record => activeRules.every(rule => matchesRule(record, rule)))
-  }, [records, rules, conjunction])
+    if (active.length === 0) return records
+    return records.filter(record => {
+      let result = matchesRule(record, active[0].rule)
+      for (let i = 1; i < active.length; i++) {
+        // Use the conjunction between the previous original rule index and this one
+        // Find the min original index gap that covers this pair
+        const prevIdx = active[i - 1].idx
+        const conj = conjunctions[prevIdx] || 'and'
+        const current = matchesRule(record, active[i].rule)
+        if (conj === 'or') {
+          result = result || current
+        } else {
+          result = result && current
+        }
+      }
+      return result
+    })
+  }, [records, rules, conjunctions])
 }

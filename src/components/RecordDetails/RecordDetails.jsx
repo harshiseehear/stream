@@ -12,6 +12,7 @@ export default function RecordDetails({ record, onPin, onUnpin, onClose, onColla
   const [size, setSize] = useState({ w: 320, h: 380 })
   const dragRef = useRef(null)
   const resizeRef = useRef(null)
+  const [dragging, setDragging] = useState(false)
 
   useLayoutEffect(() => {
     if (!pinned && initialPos) {
@@ -23,11 +24,12 @@ export default function RecordDetails({ record, onPin, onUnpin, onClose, onColla
     if (e.detail === 2) return
     e.preventDefault()
     if (onBringToFront) onBringToFront()
+    setDragging(true)
     const startX = e.clientX - pos.x
     const startY = e.clientY - pos.y
     let lastPos = { x: pos.x, y: pos.y }
     const onMove = (ev) => { lastPos = { x: ev.clientX - startX, y: ev.clientY - startY }; setPos(lastPos) }
-    const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); if (onDragEnd) onDragEnd(lastPos) }
+    const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); setDragging(false); if (onDragEnd) onDragEnd(lastPos) }
     window.addEventListener('mousemove', onMove)
     window.addEventListener('mouseup', onUp)
   }, [pos, onDragEnd, onBringToFront])
@@ -73,14 +75,16 @@ export default function RecordDetails({ record, onPin, onUnpin, onClose, onColla
       border: `1px solid ${borderColor}`,
       fontFamily: 'system-ui, -apple-system, sans-serif',
       opacity: pinned ? 0.9 : 0.75,
-      transition: 'border-radius 0.15s ease',
+      transition: dragging
+        ? 'border-radius 0.15s ease'
+        : 'left 0.25s ease, top 0.25s ease, border-radius 0.15s ease',
     }}>
       {/* Sticky header bar — drag to move, dblclick to collapse */}
       <div
         onMouseDown={onHeaderMouseDown}
         onDoubleClick={() => {
           if (!pinned && onCollapse) {
-            onCollapse()
+            onCollapse(pos)
           } else {
             setCollapsed(c => !c)
           }
@@ -108,14 +112,14 @@ export default function RecordDetails({ record, onPin, onUnpin, onClose, onColla
               {onToggleFocus && (
                 <span
                   onClick={(e) => { e.stopPropagation(); onToggleFocus() }}
-                  title={focused ? 'Exit focus' : 'Focus'}
+                  title="Focus"
                   style={{
                     display: 'inline-block',
                     width: 10,
                     height: 10,
                     borderRadius: '50%',
-                    border: `2px solid ${focused ? '#4CAF50' : textColor}`,
-                    background: focused ? '#4CAF50' : 'transparent',
+                    border: `2px solid ${textColor}`,
+                    background: focused ? textColor : 'transparent',
                     cursor: 'pointer',
                     opacity: focused ? 1 : 0.4,
                     transition: 'background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease',
@@ -127,7 +131,7 @@ export default function RecordDetails({ record, onPin, onUnpin, onClose, onColla
                 <svg
                   width="14" height="14" viewBox="0 0 24 24" fill={textColor}
                   style={{ opacity: pinned ? 0.85 : 0.25, cursor: 'pointer' }}
-                  onClick={(e) => { e.stopPropagation(); pinned ? onUnpin?.() : onPin?.() }}
+                  onClick={(e) => { e.stopPropagation(); pinned ? onUnpin?.() : onPin?.(pos) }}
                   title={pinned ? 'Unpin' : 'Pin'}
                 >
                   <path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z" />

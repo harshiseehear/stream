@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { login } from '../api/cell/auth'
-import { bgPage, brandAccent, textPrimary, colorError, textSecondary } from '../theme/colors'
+import { bgPage, brandAccent, textPrimary, textSecondary, colorError, borderPanel } from '../theme/colors'
 import ThemeToggle from '../components/ThemeToggle'
 
 export default function Login() {
@@ -32,28 +32,49 @@ export default function Login() {
       alignItems: 'center',
       justifyContent: 'center',
     }}>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '24px' }}>
-        {/* Brand Text */}
-        <h1 style={{
-          fontSize: '3rem',
-          fontFamily: 'system-ui, sans-serif',
-          margin: 0,
-          lineHeight: 1,
+      {/* Panel box */}
+      <div style={{
+        position: 'relative',
+        border: `1px solid ${borderPanel}`,
+        borderRadius: 20,
+        background: 'transparent',
+        width: 280,
+        height: 280,
+        padding: '32px 20px 20px',
+        boxSizing: 'border-box',
+        display: 'flex',
+        flexDirection: 'column',
+      }}>
+        {/* Title on top border */}
+        <div style={{
+          position: 'absolute',
+          top: -7,
+          left: 16,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 4,
+          zIndex: 1,
         }}>
           <span style={{
-            color: brandAccent,
-          }}>stream</span>
-          <span style={{
-            color: textPrimary,
-          }}>cell</span>
-        </h1>
+            fontSize: 12,
+            fontWeight: 600,
+            color: textSecondary,
+            background: bgPage,
+            padding: '0 6px',
+            lineHeight: 1,
+            fontFamily: 'system-ui, sans-serif',
+          }}>Streamcell</span>
+        </div>
 
-        {/* Login Inputs */}
+        {/* Inputs */}
         <div style={{
           display: 'flex',
           flexDirection: 'column',
-          gap: '16px',
-          width: '320px',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 16,
+          height: '100%',
+          marginTop: -20,
         }}>
           <input
             type="text"
@@ -63,12 +84,15 @@ export default function Login() {
             style={{
               padding: '8px 0',
               border: 'none',
-              borderBottom: `1px solid ${textPrimary}`,
+              borderBottom: `1px solid ${borderPanel}`,
               backgroundColor: 'transparent',
+              color: textPrimary,
               fontSize: '1rem',
               outline: 'none',
               fontFamily: 'system-ui, sans-serif',
               borderRadius: 0,
+              width: '60%',
+              textAlign: 'center',
             }}
           />
           <input
@@ -79,12 +103,15 @@ export default function Login() {
             style={{
               padding: '8px 0',
               border: 'none',
-              borderBottom: `1px solid ${textPrimary}`,
+              borderBottom: `1px solid ${borderPanel}`,
               backgroundColor: 'transparent',
+              color: textPrimary,
               fontSize: '1rem',
               outline: 'none',
               fontFamily: 'system-ui, sans-serif',
               borderRadius: 0,
+              width: '60%',
+              textAlign: 'center',
             }}
           />
           {error && (
@@ -92,23 +119,53 @@ export default function Login() {
               {error}
             </span>
           )}
+        </div>
+
+        {/* Sandbox label on bottom-left border */}
+        <div style={{
+          position: 'absolute',
+          bottom: -8,
+          left: 16,
+          background: bgPage,
+          padding: '0 6px',
+          zIndex: 1,
+          lineHeight: 1,
+        }}>
+          <span style={{
+            fontSize: 12,
+            fontWeight: 600,
+            color: textSecondary,
+            fontFamily: 'system-ui, sans-serif',
+          }}>sandbox</span>
+        </div>
+
+        {/* Login button on bottom-right border */}
+        <div style={{
+          position: 'absolute',
+          bottom: -8,
+          right: 16,
+          background: bgPage,
+          padding: '0 6px',
+          zIndex: 1,
+          lineHeight: 1,
+        }}>
           <button
             onClick={handleLogin}
             disabled={loading}
             onMouseEnter={e => e.target.style.textDecoration = 'underline'}
             onMouseLeave={e => e.target.style.textDecoration = 'none'}
             style={{
-              padding: '8px 0',
+              padding: 0,
               border: 'none',
               backgroundColor: 'transparent',
-              color: textPrimary,
-              fontSize: '1rem',
+              color: textSecondary,
+              fontSize: 12,
+              fontWeight: 600,
               fontFamily: 'system-ui, sans-serif',
               cursor: loading ? 'wait' : 'pointer',
-              textAlign: 'left',
               textDecoration: 'none',
             }}
-          >{loading ? '...' : 'enter'}</button>
+          >{loading ? '...' : 'login'}</button>
         </div>
       </div>
 
