@@ -4,7 +4,7 @@ import TimestampDisplay from './TimestampDisplay'
 import FieldSection from './FieldSection'
 import { recordDetailFallback } from '../../theme/colors'
 
-export default function RecordDetails({ record, onPin, onUnpin, onClose, onCollapse, pinned, initialPos, initialCollapsed, onDragEnd, onBringToFront }) {
+export default function RecordDetails({ record, onPin, onUnpin, onClose, onCollapse, pinned, initialPos, initialCollapsed, onDragEnd, onBringToFront, focused, onToggleFocus }) {
   if (!record) return null
 
   const [collapsed, setCollapsed] = useState(!!initialCollapsed)
@@ -105,6 +105,24 @@ export default function RecordDetails({ record, onPin, onUnpin, onClose, onColla
             <span style={{ fontSize: 10, color: subtleColor, fontWeight: 500 }}>{record.sid}</span>
             <StatusBadge label={record.statusLabel} color={record.statusColor} />
             <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4 }}>
+              {onToggleFocus && (
+                <span
+                  onClick={(e) => { e.stopPropagation(); onToggleFocus() }}
+                  title={focused ? 'Exit focus' : 'Focus'}
+                  style={{
+                    display: 'inline-block',
+                    width: 10,
+                    height: 10,
+                    borderRadius: '50%',
+                    border: `2px solid ${focused ? '#4CAF50' : textColor}`,
+                    background: focused ? '#4CAF50' : 'transparent',
+                    cursor: 'pointer',
+                    opacity: focused ? 1 : 0.4,
+                    transition: 'background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease',
+                    flexShrink: 0,
+                  }}
+                />
+              )}
               {(onPin || onUnpin) && (
                 <svg
                   width="14" height="14" viewBox="0 0 24 24" fill={textColor}

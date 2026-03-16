@@ -25,11 +25,27 @@ export function usePhysics(records) {
   const [repulsion, setRepulsion] = useState(.5)
   const [inherentAttraction, setInherentAttraction] = useState(1)
   const backlinkAdjRef = useRef([])
+  const activeSidsRef = useRef(new Set())
+  const focusedSidsRef = useRef(new Set())
+  const [focusedSids, setFocusedSids] = useState(new Set())
+  const fadeAlphaRef = useRef(null)
 
   useEffect(() => {
     physicsRef.current = { attraction, repulsion, inherentAttraction }
     reheatRef.current = true
   }, [attraction, repulsion, inherentAttraction])
+
+  // Keep activeSidsRef in sync with pinned + hovered records
+  useEffect(() => {
+    const s = new Set(pinnedRecords.map(r => r.sid))
+    if (hoveredRecord?.sid) s.add(hoveredRecord.sid)
+    activeSidsRef.current = s
+  }, [pinnedRecords, hoveredRecord])
+
+  // Keep focusedSidsRef in sync with focusedSids state
+  useEffect(() => {
+    focusedSidsRef.current = focusedSids
+  }, [focusedSids])
 
   useEffect(() => {
     if (records === null) return
@@ -358,6 +374,39 @@ export function usePhysics(records) {
           }
         }
 
+        // BACKLINK ATTRACTION — hub nodes (most backlinks) attract their linked nodes
+        {
+          const blAdj = backlinkAdjRef.current
+          // Compute backlink counts once per frame
+          const blCount = new Float32Array(nodes.length)
+          for (let i = 0; i < nodes.length; i++) {
+            blCount[i] = blAdj[i] ? blAdj[i].length : 0
+          }
+          // Find max for normalization
+          let maxBl = 0
+          for (let i = 0; i < nodes.length; i++) {
+            if (blCount[i] > maxBl) maxBl = blCount[i]
+          }
+          if (maxBl > 0) {
+            const kBacklink = attr * 0.02
+            for (let i = 0; i < nodes.length; i++) {
+              const linked = blAdj[i]
+              if (!linked || linked.length === 0) continue
+              const weight = blCount[i] / maxBl  // 0..1, hubs get ~1
+              for (const j of linked) {
+                // Pull j toward i, proportional to i's hub weight
+                const dx = nodes[i].x - nodes[j].x
+                const dy = nodes[i].y - nodes[j].y
+                const dist = Math.sqrt(dx * dx + dy * dy)
+                if (dist < 1) continue
+                const f = kBacklink * weight * alpha / dist
+                nodes[j].vx += dx * f
+                nodes[j].vy += dy * f
+              }
+            }
+          }
+        }
+
         // REPULSION — all pairs, infinite range (1/r² falloff)
         if (rep > 0) {
           const kRepel = rep * 30
@@ -425,8 +474,30 @@ export function usePhysics(records) {
         }
       }
 
-      // Draw backlink lines for hovered node
-      // Draw backlink lines for hovered node
+      // Persistent backlink lines for active (pinned/hovered) stickies
+      {
+        const active = activeSidsRef.current
+        if (active.size > 0) {
+          const blAdj = backlinkAdjRef.current
+          for (let i = 0; i < nodes.length; i++) {
+            if (!active.has(nodes[i].sid)) continue
+            const linked = blAdj[i]
+            if (!linked || linked.length === 0) continue
+            ctx.strokeStyle = 'rgba(180, 180, 180, 0.25)'
+            ctx.lineWidth = 1
+            const src = nodes[i]
+            for (const li of linked) {
+              const tgt = nodes[li]
+              ctx.beginPath()
+              ctx.moveTo(src.x, src.y)
+              ctx.lineTo(tgt.x, tgt.y)
+              ctx.stroke()
+            }
+          }
+        }
+      }
+
+      // Draw backlink lines for hovered node (on top of persistent lines)
       {
         let blHovIdx = null
         if (mouseActive) {
@@ -452,6 +523,33 @@ export function usePhysics(records) {
         }
       }
 
+      // Focus mode: compute visible index set + fade alphas
+      const focused = focusedSidsRef.current
+      let visibleIdxSet = null
+      if (focused.size > 0) {
+        visibleIdxSet = new Set()
+        const blAdj = backlinkAdjRef.current
+        for (let i = 0; i < nodes.length; i++) {
+          if (focused.has(nodes[i].sid)) {
+            visibleIdxSet.add(i)
+            const linked = blAdj[i]
+            if (linked) for (const li of linked) visibleIdxSet.add(li)
+          }
+        }
+      }
+
+      // Initialize or resize fade alpha array
+      if (!fadeAlphaRef.current || fadeAlphaRef.current.length !== nodes.length) {
+        fadeAlphaRef.current = new Float32Array(nodes.length).fill(1.0)
+      }
+      const fadeAlpha = fadeAlphaRef.current
+      for (let i = 0; i < nodes.length; i++) {
+        const target = (visibleIdxSet && !visibleIdxSet.has(i)) ? 0.05 : 1.0
+        fadeAlpha[i] += (target - fadeAlpha[i]) * 0.08
+      }
+
+      const active = activeSidsRef.current
+
       ctx.font = '11px system-ui, sans-serif'
       ctx.textBaseline = 'middle'
       let newHoveredIdx = null
@@ -462,13 +560,24 @@ export function usePhysics(records) {
         const dx = n.x - mx, dy = n.y - my
         const isHovered = mouseActive && Math.sqrt(dx * dx + dy * dy) < HIT_R
         if (isHovered) newHoveredIdx = i
+        const fa = fadeAlpha[i]
+        const baseAlpha = isHovered ? 1 : 0.8
+        const nodeAlpha = baseAlpha * fa
         ctx.beginPath()
         ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2)
-        ctx.fillStyle = isHovered ? `rgba(${cr}, ${cg}, ${cb}, 1)` : `rgba(${cr}, ${cg}, ${cb}, 0.8)`
+        ctx.fillStyle = `rgba(${cr}, ${cg}, ${cb}, ${nodeAlpha})`
         ctx.fill()
+        // Yellow ring for active (pinned/hovered) nodes
+        if (active.has(n.sid)) {
+          ctx.strokeStyle = `rgba(255, 215, 0, ${0.9 * fa})`
+          ctx.lineWidth = 2
+          ctx.beginPath()
+          ctx.arc(n.x, n.y, n.r + 2, 0, Math.PI * 2)
+          ctx.stroke()
+        }
         if (n.sid) {
           ctx.font = '5px system-ui, sans-serif'
-          ctx.fillStyle = `rgba(${cr}, ${cg}, ${cb}, 0.6)`
+          ctx.fillStyle = `rgba(${cr}, ${cg}, ${cb}, ${0.6 * fa})`
           ctx.fillText(n.sid, n.x + n.r + 4, n.y)
           ctx.font = '11px system-ui, sans-serif'
         }
@@ -498,14 +607,16 @@ export function usePhysics(records) {
         const { cx, cy } = centroids[tmpl]
         const [cr, cg, cb] = templateColors[tmpl] || templateColorFallback
         const isHov = tmpl === hoveredTemplate
+        // Fade template centroids during focus mode
+        const tmplFade = visibleIdxSet ? 0.15 : 1.0
         // Draw template circle — same style as records, just bigger
         ctx.beginPath()
         ctx.arc(cx, cy, isHov ? TMPL_R_DRAW + 2 : TMPL_R_DRAW, 0, Math.PI * 2)
-        ctx.fillStyle = isHov ? `rgba(${cr}, ${cg}, ${cb}, 1)` : `rgba(${cr}, ${cg}, ${cb}, 0.8)`
+        ctx.fillStyle = isHov ? `rgba(${cr}, ${cg}, ${cb}, ${1 * tmplFade})` : `rgba(${cr}, ${cg}, ${cb}, ${0.8 * tmplFade})`
         ctx.fill()
         // Draw template label below circle
         ctx.font = 'bold 11px system-ui, sans-serif'
-        ctx.fillStyle = isHov ? `rgba(${cr}, ${cg}, ${cb}, 0.9)` : `rgba(${cr}, ${cg}, ${cb}, 0.6)`
+        ctx.fillStyle = isHov ? `rgba(${cr}, ${cg}, ${cb}, ${0.9 * tmplFade})` : `rgba(${cr}, ${cg}, ${cb}, ${0.6 * tmplFade})`
         ctx.fillText(label, cx, cy + TMPL_R_DRAW + 10)
       }
       ctx.textAlign = 'start'
@@ -539,5 +650,6 @@ export function usePhysics(records) {
     attraction, setAttraction,
     repulsion, setRepulsion,
     inherentAttraction, setInherentAttraction,
+    focusedSids, setFocusedSids,
   }
 }

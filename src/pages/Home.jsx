@@ -41,7 +41,17 @@ export default function Home() {
     attraction, setAttraction,
     repulsion, setRepulsion,
     inherentAttraction, setInherentAttraction,
+    focusedSids, setFocusedSids,
   } = usePhysics(filteredRecords)
+
+  const toggleFocus = (sid) => {
+    setFocusedSids(prev => {
+      const next = new Set(prev)
+      if (next.has(sid)) next.delete(sid)
+      else next.add(sid)
+      return next
+    })
+  }
 
   const zCounterRef = useRef(1)
   const [hoveredZIndex, setHoveredZIndex] = useState(0)
@@ -197,14 +207,18 @@ export default function Home() {
               pinned={true}
               initialPos={rec._pos}
               initialCollapsed={rec._collapsed}
+              focused={focusedSids.has(rec.sid)}
+              onToggleFocus={() => toggleFocus(rec.sid)}
               onBringToFront={() => {
                 const z = ++zCounterRef.current
                 setPinnedRecords(prev => prev.map(p => p._pinId === rec._pinId ? { ...p, _zIndex: z } : p))
               }}
               onUnpin={() => {
+                setFocusedSids(prev => { const n = new Set(prev); n.delete(rec.sid); return n })
                 setPinnedRecords(prev => prev.filter(p => p._pinId !== rec._pinId))
               }}
               onClose={() => {
+                setFocusedSids(prev => { const n = new Set(prev); n.delete(rec.sid); return n })
                 setPinnedRecords(prev => prev.filter(p => p._pinId !== rec._pinId))
               }}
               onDragEnd={(newPos) => {
