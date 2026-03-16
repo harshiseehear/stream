@@ -108,6 +108,9 @@ export default function RecordDetails({ record, onPin, onUnpin, onClose, onColla
             )}
             <span style={{ fontSize: 10, color: subtleColor, fontWeight: 500 }}>{record.sid}</span>
             <StatusBadge label={record.statusLabel} color={record.statusColor} />
+            {typeof record.linkCount === 'number' && (
+              <span style={{ fontSize: 9, color: subtleColor, fontWeight: 500 }}>{record.linkCount} link{record.linkCount !== 1 ? 's' : ''}</span>
+            )}
             <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4 }}>
               {onToggleFocus && (
                 <span

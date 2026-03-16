@@ -41,7 +41,11 @@ export default function Home() {
     attraction, setAttraction,
     repulsion, setRepulsion,
     inherentAttraction, setInherentAttraction,
+    templateAttraction, setTemplateAttraction,
+    linkAttraction, setLinkAttraction,
     focusedSids, setFocusedSids,
+    selectedSid, setSelectedSid,
+    linkCountBySidRef,
   } = usePhysics(filteredRecords)
 
   const toggleFocus = (sid) => {
@@ -81,6 +85,7 @@ export default function Home() {
         ...record,
         _pinId: `${record.sid}-${Date.now()}`,
         _pos: pos,
+        linkCount: linkCountBySidRef.current[record.sid] ?? 0,
       }]
     })
   }
@@ -185,12 +190,14 @@ export default function Home() {
               attraction={attraction} setAttraction={setAttraction}
               repulsion={repulsion} setRepulsion={setRepulsion}
               inherentAttraction={inherentAttraction} setInherentAttraction={setInherentAttraction}
+              templateAttraction={templateAttraction} setTemplateAttraction={setTemplateAttraction}
+              linkAttraction={linkAttraction} setLinkAttraction={setLinkAttraction}
             />
           </DraggablePanel>
         </div>
 
         <div style={{ pointerEvents: 'auto' }}>
-          <DraggablePanel title="Views" defaultWidth={220} defaultHeight={200} defaultX={window.innerWidth - 220 - 16} defaultY={200} action={filterPanel.addButton} footer={filterPanel.chatInput}>
+          <DraggablePanel title="Views" defaultWidth={220} defaultHeight={200} defaultX={window.innerWidth - 220 - 16} defaultY={240} action={filterPanel.addButton} footer={filterPanel.chatInput}>
             {filterPanel.body}
           </DraggablePanel>
         </div>
@@ -208,6 +215,7 @@ export default function Home() {
               onBringToFront={() => {
                 const z = ++zCounterRef.current
                 setPinnedRecords(prev => prev.map(p => p._pinId === rec._pinId ? { ...p, _zIndex: z } : p))
+                setSelectedSid(rec.sid)
               }}
               onUnpin={() => {
                 setFocusedSids(prev => { const n = new Set(prev); n.delete(rec.sid); return n })
@@ -230,7 +238,7 @@ export default function Home() {
             record={hoveredRecord}
             pinned={false}
             initialPos={hoveredPos}
-            onBringToFront={() => setHoveredZIndex(++zCounterRef.current)}
+            onBringToFront={() => { setHoveredZIndex(++zCounterRef.current); setSelectedSid(hoveredRecord?.sid ?? null) }}
             onPin={() => {
               if (hoveredRecord) {
                 const pinned = { ...hoveredRecord, _pinId: `${hoveredRecord.sid}-${Date.now()}`, _pos: { ...hoveredPos } }

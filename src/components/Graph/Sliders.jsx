@@ -2,6 +2,8 @@ export default function Sliders({
   attraction, setAttraction,
   repulsion, setRepulsion,
   inherentAttraction, setInherentAttraction,
+  templateAttraction, setTemplateAttraction,
+  linkAttraction, setLinkAttraction,
 }) {
   const sliderStyle = { width: 100, accentColor: 'var(--text-secondary)' }
   const labelStyle = { display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-secondary)' }
@@ -26,6 +28,18 @@ export default function Sliders({
         <input type="range" min="0" max="1" step="0.01" value={inherentAttraction}
           onChange={e => setInherentAttraction(+e.target.value)} style={sliderStyle} />
         <span style={numStyle}>{inherentAttraction.toFixed(2)}</span>
+      </label>
+      <label style={labelStyle}>
+        template
+        <input type="range" min="0" max="1" step="0.01" value={templateAttraction}
+          onChange={e => setTemplateAttraction(+e.target.value)} style={sliderStyle} />
+        <span style={numStyle}>{templateAttraction.toFixed(2)}</span>
+      </label>
+      <label style={labelStyle}>
+        links
+        <input type="range" min="0" max="1" step="0.01" value={linkAttraction}
+          onChange={e => setLinkAttraction(+e.target.value)} style={sliderStyle} />
+        <span style={numStyle}>{linkAttraction.toFixed(2)}</span>
       </label>
     </div>
   )

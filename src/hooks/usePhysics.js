@@ -15,25 +15,36 @@ export function usePhysics(records) {
   const hoveredIdxRef = useRef(null)
   const pinnedIndicesRef = useRef(new Set())
   const hoveredPosRef = useRef({ x: 16, y: 368 })
-  const physicsRef = useRef({ attraction: 0.3, repulsion: 0.5, inherentAttraction: 0.5 })
+  const physicsRef = useRef({ attraction: 0.3, repulsion: 0.5, inherentAttraction: 0.5, templateAttraction: 0, linkAttraction: 1 })
   const alphaRef = useRef(1.0)
   const reheatRef = useRef(false)
+  const warmupStartRef = useRef(null)
+  const hasInitializedRef = useRef(false)
 
   const [hoveredRecord, setHoveredRecord] = useState(null)
   const [pinnedRecords, setPinnedRecords] = useState([])
   const [attraction, setAttraction] = useState(.5)
   const [repulsion, setRepulsion] = useState(.5)
   const [inherentAttraction, setInherentAttraction] = useState(1)
+  const [templateAttraction, setTemplateAttraction] = useState(1)
+  const [linkAttraction, setLinkAttraction] = useState(1)
   const backlinkAdjRef = useRef([])
   const activeSidsRef = useRef(new Set())
   const focusedSidsRef = useRef(new Set())
   const [focusedSids, setFocusedSids] = useState(new Set())
   const fadeAlphaRef = useRef(null)
+  const [selectedSid, setSelectedSid] = useState(null)
+  const selectedSidRef = useRef(null)
+  const linkCountBySidRef = useRef({})
 
   useEffect(() => {
-    physicsRef.current = { attraction, repulsion, inherentAttraction }
+    selectedSidRef.current = selectedSid
+  }, [selectedSid])
+
+  useEffect(() => {
+    physicsRef.current = { attraction, repulsion, inherentAttraction, templateAttraction, linkAttraction }
     reheatRef.current = true
-  }, [attraction, repulsion, inherentAttraction])
+  }, [attraction, repulsion, inherentAttraction, templateAttraction, linkAttraction])
 
   // Keep activeSidsRef in sync with pinned + hovered records
   useEffect(() => {
@@ -84,6 +95,8 @@ export function usePhysics(records) {
       if (n.sid) existingBySid[n.sid] = n
     }
 
+    const isFirstLoad = !hasInitializedRef.current
+
     let hasNewNodes = false
     const nodes = []
     for (let i = 0; i < count; i++) {
@@ -107,8 +120,8 @@ export function usePhysics(records) {
         containerLevelLabel: rec.containerLevelLabel ?? '',
         x: existing ? existing.x : PAD + Math.random() * (w - PAD * 2),
         y: existing ? existing.y : PAD + Math.random() * (h - PAD * 2),
-        vx: existing ? existing.vx : (Math.random() - 0.5) * 0.6,
-        vy: existing ? existing.vy : (Math.random() - 0.5) * 0.6,
+        vx: existing ? existing.vx : (isFirstLoad ? 0 : (Math.random() - 0.5) * 0.6),
+        vy: existing ? existing.vy : (isFirstLoad ? 0 : (Math.random() - 0.5) * 0.6),
         r: 4,
       })
     }
@@ -116,6 +129,12 @@ export function usePhysics(records) {
 
     // Only reset alpha when there are genuinely new nodes
     if (hasNewNodes) alphaRef.current = 1.0
+
+    // Trigger warmup on very first load
+    if (isFirstLoad && hasNewNodes) {
+      hasInitializedRef.current = true
+      warmupStartRef.current = performance.now()
+    }
 
     const templateMap = {}
     for (let i = 0; i < nodes.length; i++) {
@@ -146,6 +165,25 @@ export function usePhysics(records) {
       }
     }
     backlinkAdjRef.current = backlinkAdj
+
+    // Build sid→linkCount map for stickies
+    const lcMap = {}
+    for (let i = 0; i < nodes.length; i++) {
+      lcMap[nodes[i].sid] = backlinkAdj[i] ? backlinkAdj[i].length : 0
+    }
+    linkCountBySidRef.current = lcMap
+
+    // Dynamic node radii based on child link count
+    const MIN_R = 3, MAX_R = 12
+    let maxLinks = 0
+    for (let i = 0; i < nodes.length; i++) {
+      const c = backlinkAdj[i] ? backlinkAdj[i].length : 0
+      if (c > maxLinks) maxLinks = c
+    }
+    for (let i = 0; i < nodes.length; i++) {
+      const c = backlinkAdj[i] ? backlinkAdj[i].length : 0
+      nodes[i].r = maxLinks > 0 ? MIN_R + (MAX_R - MIN_R) * (c / maxLinks) : MIN_R
+    }
 
     const onMouseMove = (e) => {
       const rect = canvas.getBoundingClientRect()
@@ -218,14 +256,13 @@ export function usePhysics(records) {
         }
       }
 
-      const HIT = 12
       let closest = null
-      let closestDist = HIT
+      let closestDist = Infinity
       for (let i = 0; i < nodes.length; i++) {
         const dx = nodes[i].x - mx
         const dy = nodes[i].y - my
         const d = Math.sqrt(dx * dx + dy * dy)
-        if (d < closestDist) {
+        if (d < nodes[i].r + 6 && d < closestDist) {
           closestDist = d
           closest = i
         }
@@ -234,9 +271,13 @@ export function usePhysics(records) {
         dragRef.current = closest
         nodes[closest].vx = 0
         nodes[closest].vy = 0
+        selectedSidRef.current = nodes[closest].sid
+        setSelectedSid(nodes[closest].sid)
       } else {
         // Empty space — start canvas pan
         panRef.current = { lastX: sx, lastY: sy }
+        selectedSidRef.current = null
+        setSelectedSid(null)
       }
     }
 
@@ -268,14 +309,13 @@ export function usePhysics(records) {
       const sx = e.clientX - rect.left
       const sy = e.clientY - rect.top
       const { x: mx, y: my } = screenToWorld(sx, sy)
-      const HIT = 12
       let closest = null
-      let closestDist = HIT
+      let closestDist = Infinity
       for (let i = 0; i < nodes.length; i++) {
         const dx = nodes[i].x - mx
         const dy = nodes[i].y - my
         const d = Math.sqrt(dx * dx + dy * dy)
-        if (d < closestDist) { closestDist = d; closest = i }
+        if (d < nodes[i].r + 6 && d < closestDist) { closestDist = d; closest = i }
       }
       if (closest !== null) {
         const n = nodes[closest]
@@ -293,6 +333,7 @@ export function usePhysics(records) {
             containerLabel: n.containerLabel, containerLevelLabel: n.containerLevelLabel,
             templateColor: templateColors[n.template] || null,
             nodeX: n.x, nodeY: n.y,
+            linkCount: backlinkAdj[closest] ? backlinkAdj[closest].length : 0,
           }
           pinnedIndicesRef.current.add(closest)
           setPinnedRecords(prev => [...prev, rec])
@@ -311,10 +352,11 @@ export function usePhysics(records) {
 
     const ALPHA_DECAY = 0.002
     const ALPHA_MIN = 0.0001
+    const WARMUP_MS = 5000
 
     const draw = () => {
       ctx.clearRect(0, 0, w, h)
-      const { attraction: attr, repulsion: rep, inherentAttraction: inh } = physicsRef.current
+      const { attraction: attr, repulsion: rep, inherentAttraction: inh, templateAttraction: tmplAttr, linkAttraction: linkAttr } = physicsRef.current
 
       // Reheat on slider change
       if (reheatRef.current) {
@@ -322,10 +364,30 @@ export function usePhysics(records) {
         reheatRef.current = false
       }
 
-      // Alpha decay (simulated annealing)
+      // Warmup: ease-in forces over 5 seconds on initial load
       let alpha = alphaRef.current
-      alpha += (0 - alpha) * ALPHA_DECAY
-      alphaRef.current = alpha
+      let isWarming = false
+      let warmupT = 0
+      const warmupStart = warmupStartRef.current
+      if (warmupStart !== null) {
+        const elapsed = performance.now() - warmupStart
+        if (elapsed < WARMUP_MS) {
+          isWarming = true
+          warmupT = elapsed / WARMUP_MS
+          alpha = warmupT * warmupT * warmupT   // cubic ease-in: still → accelerate
+        } else {
+          // Warmup complete — reset alpha for normal decay
+          warmupStartRef.current = null
+          alphaRef.current = 1.0
+          alpha = 1.0
+        }
+      }
+
+      if (!isWarming) {
+        // Normal alpha decay (simulated annealing)
+        alpha += (0 - alpha) * ALPHA_DECAY
+        alphaRef.current = alpha
+      }
 
       const simulate = alpha >= ALPHA_MIN
 
@@ -350,7 +412,7 @@ export function usePhysics(records) {
           cx /= indices.length; cy /= indices.length
 
           // Centroid pull
-          const kCentroid = (inh * 0.006 + attr * 0.012)
+          const kCentroid = (inh * 0.006 + attr * 0.012) * (0.2 + tmplAttr * 1.8)
           for (const i of indices) {
             const dx = cx - nodes[i].x
             const dy = cy - nodes[i].y
@@ -359,7 +421,7 @@ export function usePhysics(records) {
           }
 
           // Pairwise attraction within template
-          const kPair = 0.001 * (1 + inh + attr)
+          const kPair = 0.001 * (1 + inh + attr) * (0.2 + tmplAttr * 1.8)
           for (let a = 0; a < indices.length; a++) {
             for (let b = a + 1; b < indices.length; b++) {
               const ni = nodes[indices[a]], nj = nodes[indices[b]]
@@ -388,7 +450,7 @@ export function usePhysics(records) {
             if (blCount[i] > maxBl) maxBl = blCount[i]
           }
           if (maxBl > 0) {
-            const kBacklink = attr * 0.02
+            const kBacklink = attr * 0.02 * (0.2 + linkAttr * 1.8)
             for (let i = 0; i < nodes.length; i++) {
               const linked = blAdj[i]
               if (!linked || linked.length === 0) continue
@@ -425,8 +487,9 @@ export function usePhysics(records) {
         }
       }
 
-      // Damping
-      for (const n of nodes) { n.vx *= 0.6; n.vy *= 0.6 }
+      // Damping — gentler during warmup for organic motion
+      const damp = isWarming ? 0.4 + 0.2 * warmupT : 0.6
+      for (const n of nodes) { n.vx *= damp; n.vy *= damp }
 
       // Position update (no bounds — free to go off-screen)
       const dragIdx = dragRef.current
@@ -497,14 +560,15 @@ export function usePhysics(records) {
       if (!inFocusMode && hoveredTemplate && centroids[hoveredTemplate]) {
         const { cx, cy } = centroids[hoveredTemplate]
         const [cr, cg, cb] = templateColors[hoveredTemplate] || templateColorFallback
-        ctx.strokeStyle = `rgba(${cr}, ${cg}, ${cb}, 0.35)`
+        ctx.strokeStyle = `rgba(${cr}, ${cg}, ${cb}, 0.175)`
         ctx.lineWidth = 1
         for (const i of templateMap[hoveredTemplate]) {
           ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(nodes[i].x, nodes[i].y); ctx.stroke()
         }
       }
 
-      // Persistent backlink lines for active (pinned/hovered) stickies — skip in focus mode
+      // Build set of highlighted child node indices (linked from active/hovered nodes)
+      const highlightedChildren = new Set()
       if (!inFocusMode) {
         const active = activeSidsRef.current
         if (active.size > 0) {
@@ -512,42 +576,16 @@ export function usePhysics(records) {
           for (let i = 0; i < nodes.length; i++) {
             if (!active.has(nodes[i].sid)) continue
             const linked = blAdj[i]
-            if (!linked || linked.length === 0) continue
-            ctx.strokeStyle = 'rgba(180, 180, 180, 0.25)'
-            ctx.lineWidth = 1
-            const src = nodes[i]
-            for (const li of linked) {
-              const tgt = nodes[li]
-              ctx.beginPath()
-              ctx.moveTo(src.x, src.y)
-              ctx.lineTo(tgt.x, tgt.y)
-              ctx.stroke()
-            }
+            if (linked) for (const li of linked) highlightedChildren.add(li)
           }
         }
-      }
-
-      // Draw backlink lines for hovered node — skip in focus mode
-      if (!inFocusMode) {
-        let blHovIdx = null
         if (mouseActive) {
           for (let i = 0; i < nodes.length; i++) {
             const dx = nodes[i].x - mx, dy = nodes[i].y - my
-            if (Math.sqrt(dx * dx + dy * dy) < 10) { blHovIdx = i; break }
-          }
-        }
-        if (blHovIdx !== null) {
-          const linked = backlinkAdjRef.current[blHovIdx]
-          if (linked && linked.length > 0) {
-            ctx.strokeStyle = 'rgba(180, 180, 180, 0.3)'
-            ctx.lineWidth = 1
-            const src = nodes[blHovIdx]
-            for (const li of linked) {
-              const tgt = nodes[li]
-              ctx.beginPath()
-              ctx.moveTo(src.x, src.y)
-              ctx.lineTo(tgt.x, tgt.y)
-              ctx.stroke()
+            if (Math.sqrt(dx * dx + dy * dy) < nodes[i].r + 6) {
+              const linked = backlinkAdjRef.current[i]
+              if (linked) for (const li of linked) highlightedChildren.add(li)
+              break
             }
           }
         }
@@ -560,7 +598,7 @@ export function usePhysics(records) {
           const linked = blAdj[fi]
           if (!linked || linked.length === 0) continue
           const src = nodes[fi]
-          ctx.strokeStyle = 'rgba(180, 180, 180, 0.25)'
+          ctx.strokeStyle = 'rgba(180, 180, 180, 0.125)'
           ctx.lineWidth = 1
           for (const li of linked) {
             const tgt = nodes[li]
@@ -577,28 +615,27 @@ export function usePhysics(records) {
       ctx.font = '11px system-ui, sans-serif'
       ctx.textBaseline = 'middle'
       let newHoveredIdx = null
-      const HIT_R = 10
       for (let i = 0; i < nodes.length; i++) {
         const n = nodes[i]
         const [cr, cg, cb] = templateColors[n.template] || templateColorFallback
         const dx = n.x - mx, dy = n.y - my
-        const isHovered = mouseActive && Math.sqrt(dx * dx + dy * dy) < HIT_R
+        const isHovered = mouseActive && Math.sqrt(dx * dx + dy * dy) < n.r + 6
         if (isHovered) newHoveredIdx = i
         const fa = fadeAlpha[i]
+        const isActive = active.has(n.sid)
+        const isHighlighted = highlightedChildren.has(i)
         const baseAlpha = isHovered ? 1 : 0.8
-        const nodeAlpha = baseAlpha * fa
+        const nodeAlpha = (isActive || isHighlighted ? 1 : baseAlpha) * fa
+        // Brighten active / highlighted child nodes by blending color toward white
+        const bright = 0.4
+        const shouldBrighten = isActive || isHighlighted
+        const nr = shouldBrighten ? Math.round(cr + (255 - cr) * bright) : cr
+        const ng = shouldBrighten ? Math.round(cg + (255 - cg) * bright) : cg
+        const nb = shouldBrighten ? Math.round(cb + (255 - cb) * bright) : cb
         ctx.beginPath()
         ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2)
-        ctx.fillStyle = `rgba(${cr}, ${cg}, ${cb}, ${nodeAlpha})`
+        ctx.fillStyle = `rgba(${nr}, ${ng}, ${nb}, ${nodeAlpha})`
         ctx.fill()
-        // White ring for active (pinned/hovered) nodes
-        if (active.has(n.sid)) {
-          ctx.strokeStyle = `rgba(255, 255, 255, ${0.9 * fa})`
-          ctx.lineWidth = 2
-          ctx.beginPath()
-          ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2)
-          ctx.stroke()
-        }
         if (n.sid) {
           ctx.font = '5px system-ui, sans-serif'
           ctx.fillStyle = `rgba(${cr}, ${cg}, ${cb}, ${0.6 * fa})`
@@ -619,7 +656,23 @@ export function usePhysics(records) {
             containerLabel: n.containerLabel, containerLevelLabel: n.containerLevelLabel,
             templateColor: templateColors[n.template] || null,
             nodeX: n.x, nodeY: n.y,
+            linkCount: backlinkAdjRef.current[newHoveredIdx] ? backlinkAdjRef.current[newHoveredIdx].length : 0,
           })
+        }
+      }
+
+      // Selection highlight dot
+      const selSid = selectedSidRef.current
+      if (selSid) {
+        for (let i = 0; i < nodes.length; i++) {
+          if (nodes[i].sid === selSid) {
+            const sn = nodes[i]
+            ctx.beginPath()
+            ctx.arc(sn.x, sn.y, sn.r * 0.35, 0, Math.PI * 2)
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.6)'
+            ctx.fill()
+            break
+          }
         }
       }
 
@@ -674,6 +727,10 @@ export function usePhysics(records) {
     attraction, setAttraction,
     repulsion, setRepulsion,
     inherentAttraction, setInherentAttraction,
+    templateAttraction, setTemplateAttraction,
+    linkAttraction, setLinkAttraction,
     focusedSids, setFocusedSids,
+    selectedSid, setSelectedSid,
+    linkCountBySidRef,
   }
 }
