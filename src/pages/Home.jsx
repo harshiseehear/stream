@@ -11,12 +11,17 @@ import Sliders from '../components/Graph/Sliders'
 import RecordDetails from '../components/RecordDetails/RecordDetails'
 import FilterPanel from '../components/Filter/FilterPanel'
 import DraggablePanel from '../components/DraggablePanel'
+import TableView from '../components/Table/TableView'
+import SettingsMenu from '../components/SettingsMenu'
 
 export default function Home() {
   const navigate = useNavigate()
   const records = useRecords()
   const [filterRules, setFilterRules] = useState([])
   const [conjunctions, setConjunctions] = useState([])
+  const [view, setView] = useState('graph')
+  const [graphViewsVisible, setGraphViewsVisible] = useState(true)
+  const [tableViewsVisible, setTableViewsVisible] = useState(false)
   const [searchVisible, setSearchVisible] = useState(false)
   const closeSearch = useCallback(() => setSearchVisible(false), [])
 
@@ -25,6 +30,10 @@ export default function Home() {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault()
         setSearchVisible(v => !v)
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'g') {
+        e.preventDefault()
+        setView(v => v === 'graph' ? 'table' : 'graph')
       }
     }
     window.addEventListener('keydown', handler)
@@ -115,11 +124,21 @@ export default function Home() {
       position: 'relative',
       overflow: 'hidden',
     }}>
-      <Graph ref={canvasRef} />
+      <Graph ref={canvasRef} style={{ display: view === 'graph' ? undefined : 'none' }} />
+
+      {view === 'table' && (
+        <TableView
+          records={filteredRecords}
+          onRowClick={handleSearchSelect}
+          viewsVisible={tableViewsVisible}
+          onToggleViews={() => setTableViewsVisible(v => !v)}
+          filterPanel={filterPanel}
+        />
+      )}
 
       <div style={{
         position: 'absolute',
-        bottom: 16,
+        top: 16,
         right: 16,
         display: 'flex',
         alignItems: 'center',
@@ -127,36 +146,33 @@ export default function Home() {
         zIndex: 10,
       }}>
         <ThemeToggle />
-        <button
-          onClick={() => { sessionStorage.removeItem('ishToken'); navigate('/login') }}
-          style={{
-            background: 'none',
-            border: 'none',
-            color: textSecondary,
-            fontFamily: 'system-ui, sans-serif',
-            fontSize: 12,
-            cursor: 'pointer',
-            padding: 0,
-            textDecoration: 'none',
-          }}
-          onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'}
-          onMouseLeave={e => e.currentTarget.style.textDecoration = 'none'}
-        >
-          Sign out
-        </button>
+        <SettingsMenu onSignOut={() => { sessionStorage.removeItem('ishToken'); navigate('/login') }} />
       </div>
 
-      <span style={{
+      <div style={{
         position: 'absolute',
-        bottom: 16,
-        left: 16,
-        color: textSecondary,
-        fontFamily: 'system-ui, sans-serif',
-        fontSize: 12,
+        bottom: 24,
+        left: 24,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 2,
         zIndex: 10,
       }}>
-        {navigator.platform.toUpperCase().includes('MAC') ? '⌘K' : 'Ctrl+Shift+K'} to search
-      </span>
+        <span style={{
+          color: textSecondary,
+          fontFamily: 'system-ui, sans-serif',
+          fontSize: 12,
+        }}>
+          {navigator.platform.toUpperCase().includes('MAC') ? '⌘G' : 'Ctrl+G'} to toggle view
+        </span>
+        <span style={{
+          color: textSecondary,
+          fontFamily: 'system-ui, sans-serif',
+          fontSize: 12,
+        }}>
+          {navigator.platform.toUpperCase().includes('MAC') ? '⌘K' : 'Ctrl+K'} to search
+        </span>
+      </div>
 
       {records === null && (
         <div style={{
@@ -184,23 +200,27 @@ export default function Home() {
         color: textSecondary,
         userSelect: 'none',
       }}>
-        <div style={{ pointerEvents: 'auto' }}>
-          <DraggablePanel title="Graph" defaultWidth={220} defaultHeight={'auto'} defaultX={window.innerWidth - 220 - 16} defaultY={80}>
-            <Sliders
-              attraction={attraction} setAttraction={setAttraction}
-              repulsion={repulsion} setRepulsion={setRepulsion}
-              inherentAttraction={inherentAttraction} setInherentAttraction={setInherentAttraction}
-              templateAttraction={templateAttraction} setTemplateAttraction={setTemplateAttraction}
-              linkAttraction={linkAttraction} setLinkAttraction={setLinkAttraction}
-            />
-          </DraggablePanel>
-        </div>
+        {view === 'graph' && (
+          <div style={{ pointerEvents: 'auto' }}>
+            <DraggablePanel title="Graph" defaultWidth={220} defaultHeight={'auto'} defaultX={window.innerWidth - 220 - 16} defaultY={80}>
+              <Sliders
+                attraction={attraction} setAttraction={setAttraction}
+                repulsion={repulsion} setRepulsion={setRepulsion}
+                inherentAttraction={inherentAttraction} setInherentAttraction={setInherentAttraction}
+                templateAttraction={templateAttraction} setTemplateAttraction={setTemplateAttraction}
+                linkAttraction={linkAttraction} setLinkAttraction={setLinkAttraction}
+              />
+            </DraggablePanel>
+          </div>
+        )}
 
-        <div style={{ pointerEvents: 'auto' }}>
-          <DraggablePanel title="Views" defaultWidth={220} defaultHeight={200} defaultX={window.innerWidth - 220 - 16} defaultY={240} action={filterPanel.addButton} footer={filterPanel.chatInput}>
-            {filterPanel.body}
-          </DraggablePanel>
-        </div>
+        {view === 'graph' && graphViewsVisible && (
+          <div style={{ pointerEvents: 'auto' }}>
+            <DraggablePanel title="Views" defaultWidth={220} defaultHeight={200} defaultX={window.innerWidth - 220 - 16} defaultY={240} action={filterPanel.addButton} footer={filterPanel.chatInput} background={bgPage}>
+              {filterPanel.body}
+            </DraggablePanel>
+          </div>
+        )}
 
         {/* Pinned record stickies */}
         {pinnedRecords.map((rec) => (

@@ -10,7 +10,7 @@ const corners = [
   { key: 'tl', cursor: 'nwse-resize', top: 0, left: 0 },
 ]
 
-export default function DraggablePanel({ title, children, defaultWidth = 260, defaultHeight = 'auto', defaultX = 0, defaultY = 0, action, footer }) {
+export default function DraggablePanel({ title, children, defaultWidth = 260, defaultHeight = 'auto', defaultX = 0, defaultY = 0, action, footer, background }) {
   const [pos, setPos] = useState({ x: defaultX, y: defaultY })
   const [size, setSize] = useState({ w: defaultWidth, h: defaultHeight })
 
@@ -75,7 +75,7 @@ export default function DraggablePanel({ title, children, defaultWidth = 260, de
         top: pos.y,
         border: `1px solid ${borderPanel}`,
         borderRadius: 20,
-        background: 'transparent',
+        background: background || 'transparent',
         boxSizing: 'border-box',
         width: size.w,
         height: typeof size.h === 'number' ? size.h : size.h,

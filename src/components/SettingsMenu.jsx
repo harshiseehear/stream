@@ -1,9 +1,7 @@
 import { useState, useRef, useEffect, useLayoutEffect } from 'react'
-import { useTheme } from '../theme/ThemeContext'
 import { bgPage, borderPanel, dropdownHoverBg, dropdownText } from '../theme/colors'
 
-export default function ThemeToggle() {
-  const { theme, setTheme, themeNames } = useTheme()
+export default function SettingsMenu({ onSignOut }) {
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
   const dropRef = useRef(null)
@@ -22,12 +20,11 @@ export default function ThemeToggle() {
     const el = dropRef.current
     const height = el.offsetHeight
     const width = el.offsetWidth
-    let top = triggerRect.top - height - 6
+    let top = triggerRect.bottom + 6
     let left = triggerRect.right - width
-    if (top < 8) top = triggerRect.bottom + 6
     if (left < 8) left = 8
     if (left + width > window.innerWidth - 8) left = window.innerWidth - width - 8
-    if (top + height > window.innerHeight - 8) top = Math.max(8, window.innerHeight - height - 8)
+    if (top + height > window.innerHeight - 8) top = Math.max(8, triggerRect.top - height - 6)
     el.style.top = top + 'px'
     el.style.left = left + 'px'
   }, [open])
@@ -35,7 +32,7 @@ export default function ThemeToggle() {
   return (
     <div ref={ref} style={{ position: 'relative' }}>
       <button
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => setOpen(o => !o)}
         style={{
           background: 'none',
           border: 'none',
@@ -47,23 +44,15 @@ export default function ThemeToggle() {
           lineHeight: 1,
           display: 'flex',
           alignItems: 'center',
-          gap: 4,
           opacity: 0.7,
         }}
-        title="Change theme"
+        title="Settings"
         onMouseEnter={e => e.currentTarget.style.opacity = '1'}
         onMouseLeave={e => { if (!open) e.currentTarget.style.opacity = '0.7' }}
       >
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="5"/>
-          <line x1="12" y1="1" x2="12" y2="3"/>
-          <line x1="12" y1="21" x2="12" y2="23"/>
-          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
-          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-          <line x1="1" y1="12" x2="3" y2="12"/>
-          <line x1="21" y1="12" x2="23" y2="12"/>
-          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
-          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+          <circle cx="12" cy="12" r="3" />
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1.08-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1.08 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1.08z" />
         </svg>
       </button>
 
@@ -81,31 +70,26 @@ export default function ThemeToggle() {
             padding: 6,
           }}
         >
-          {themeNames.map((name) => (
-            <button
-              key={name}
-              onClick={() => { setTheme(name); setOpen(false) }}
-              style={{
-                display: 'block',
-                width: '100%',
-                textAlign: 'left',
-                padding: '4px 8px',
-                background: name === theme ? dropdownHoverBg : 'transparent',
-                border: 'none',
-                color: dropdownText,
-                cursor: 'pointer',
-                fontSize: 11,
-                fontFamily: 'system-ui, sans-serif',
-                textTransform: 'capitalize',
-                borderRadius: 4,
-                fontWeight: name === theme ? 600 : 400,
-              }}
-              onMouseEnter={(e) => { if (name !== theme) e.currentTarget.style.background = dropdownHoverBg }}
-              onMouseLeave={(e) => { if (name !== theme) e.currentTarget.style.background = 'transparent' }}
-            >
-              {name}
-            </button>
-          ))}
+          <button
+            onClick={() => { setOpen(false); onSignOut() }}
+            style={{
+              display: 'block',
+              width: '100%',
+              textAlign: 'left',
+              padding: '4px 8px',
+              background: 'transparent',
+              border: 'none',
+              color: dropdownText,
+              cursor: 'pointer',
+              fontSize: 11,
+              fontFamily: 'system-ui, sans-serif',
+              borderRadius: 4,
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = dropdownHoverBg}
+            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+          >
+            Sign out
+          </button>
         </div>
       )}
     </div>
