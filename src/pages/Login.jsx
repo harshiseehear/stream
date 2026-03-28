@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { login } from '../api/cell/auth'
 import { bgPage, brandAccent, textPrimary, textSecondary, colorError, borderPanel } from '../theme/colors'
 import ThemeToggle from '../components/ThemeToggle'
+import PhyllotaxisBackground from '../components/PhyllotaxisBackground'
 
 export default function Login() {
   const [username, setUsername] = useState('')
@@ -26,18 +27,22 @@ export default function Login() {
 
   return (
     <div style={{
+      position: 'relative',
+      overflow: 'hidden',
       backgroundColor: bgPage,
       minHeight: '100vh',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
     }}>
+      <PhyllotaxisBackground />
       {/* Panel box */}
       <div style={{
         position: 'relative',
+        zIndex: 1,
         border: `1px solid ${borderPanel}`,
         borderRadius: 20,
-        background: 'transparent',
+        background: bgPage,
         width: 280,
         height: 280,
         padding: '32px 20px 20px',
