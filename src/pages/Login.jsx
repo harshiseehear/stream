@@ -9,7 +9,22 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [passcode, setPasscode] = useState('')
+  const [unlocked, setUnlocked] = useState(false)
   const navigate = useNavigate()
+
+  const handleKeyClick = (k) => {
+    const next = passcode + k
+    if (next === '1234') {
+      setUnlocked(true)
+    } else if (next.length >= 4) {
+      setPasscode('')
+    } else {
+      setPasscode(next)
+    }
+  }
+
+  const keyStyle = { width: 40, height: 40, borderRadius: '50%', border: `1px solid ${borderPanel}`, background: 'transparent', color: textPrimary, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, padding: 0 }
 
   const handleLogin = async () => {
     setError('')
@@ -67,6 +82,31 @@ export default function Login() {
         </div>
 
         {/* Inputs */}
+        {!unlocked && (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, height: '100%', marginTop: -20 }}>
+          <div style={{ display: 'flex', gap: 16 }}>
+            <button onClick={() => handleKeyClick('1')} style={keyStyle}>1</button>
+            <button onClick={() => handleKeyClick('2')} style={keyStyle}>2</button>
+            <button onClick={() => handleKeyClick('3')} style={keyStyle}>3</button>
+          </div>
+          <div style={{ display: 'flex', gap: 16 }}>
+            <button onClick={() => handleKeyClick('4')} style={keyStyle}>4</button>
+            <button onClick={() => handleKeyClick('5')} style={keyStyle}>5</button>
+            <button onClick={() => handleKeyClick('6')} style={keyStyle}>6</button>
+          </div>
+          <div style={{ display: 'flex', gap: 16 }}>
+            <button onClick={() => handleKeyClick('7')} style={keyStyle}>7</button>
+            <button onClick={() => handleKeyClick('8')} style={keyStyle}>8</button>
+            <button onClick={() => handleKeyClick('9')} style={keyStyle}>9</button>
+          </div>
+          <div style={{ display: 'flex', gap: 16 }}>
+            <div style={{ width: 40, height: 40 }}></div>
+            <button onClick={() => handleKeyClick('0')} style={keyStyle}>0</button>
+            <div style={{ width: 40, height: 40 }}></div>
+          </div>
+        </div>
+        )}
+        {unlocked && (
         <div style={{
           display: 'flex',
           flexDirection: 'column',
@@ -120,6 +160,7 @@ export default function Login() {
             </span>
           )}
         </div>
+        )}
 
         {/* Sandbox label on bottom-left border */}
         <div style={{
@@ -140,6 +181,7 @@ export default function Login() {
         </div>
 
         {/* Login button on bottom-right border */}
+        {unlocked && (
         <div style={{
           position: 'absolute',
           bottom: -8,
@@ -167,6 +209,7 @@ export default function Login() {
             }}
           >{loading ? '...' : 'login'}</button>
         </div>
+        )}
       </div>
 
       <div style={{
