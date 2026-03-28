@@ -46,14 +46,15 @@ export function useRecords() {
                 const secFields = []
                 for (const fd of (sec.sectionFieldsDef ?? [])) {
                   if (fd.type === 'TASK_DEF') {
-                    if (fd.uuid) secFields.push({ uuid: fd.uuid, label: fd.taskLabel ?? fd.fieldLabel ?? fd.uuid, isTask: true, fieldType: 'TASK' })
+                    const taskSubFields = (fd.taskFieldDefs ?? []).map(tf => ({
+                      uuid: tf.uuid, label: tf.fieldLabel ?? tf.uuid, isTask: false, fieldType: tf.fieldType ?? '',
+                    })).filter(tf => tf.uuid)
+                    if (fd.uuid) secFields.push({ uuid: fd.uuid, label: fd.taskLabel ?? fd.fieldLabel ?? fd.uuid, isTask: true, fieldType: 'TASK', taskSubFields })
                   } else {
                     if (fd.uuid) secFields.push({ uuid: fd.uuid, label: fd.fieldLabel ?? fd.uuid, isTask: false, fieldType: fd.fieldType ?? '' })
                   }
                 }
-                if (secFields.length > 0) {
-                  sections.push({ sectionLabel: sec.sectionLabel ?? '', sectionUuid: sec.uuid ?? '', fields: secFields })
-                }
+                sections.push({ sectionLabel: sec.sectionLabel ?? '', sectionUuid: sec.uuid ?? '', fields: secFields })
               }
 
               let recordKeyUuid = null
@@ -83,16 +84,28 @@ export function useRecords() {
                   if (sectionVisibility[sec.sectionUuid] === false) continue
                   const sectionFields = []
                   for (const fd of sec.fields) {
-                    const key = (fd.isTask ? 'task' : 'field') + fd.uuid
-                    const raw = resps[key]
-                    if (raw === undefined || raw === null) continue
-                    const display = formatFieldValue(raw, fd.fieldType)
-                    if (display === null) continue
-                    sectionFields.push({ name: fd.label, value: display, fieldType: fd.fieldType })
+                    if (fd.isTask) {
+                      const key = 'task' + fd.uuid
+                      const raw = resps[key]
+                      const taskRows = Array.isArray(raw) ? raw : []
+                      const done = taskRows.filter(t => t.taskRowDone).length
+                      sectionFields.push({ name: fd.label, value: taskRows.length > 0 ? `${done}/${taskRows.length} task(s) complete` : null, fieldType: 'TASK' })
+                      for (const subField of (fd.taskSubFields ?? [])) {
+                        const subValues = taskRows.map(row => {
+                          const sv = row?.['field' + subField.uuid]
+                          if (sv === undefined || sv === null) return null
+                          return formatFieldValue(sv, subField.fieldType)
+                        }).filter(Boolean)
+                        sectionFields.push({ name: subField.label, value: subValues.length > 0 ? subValues.join(', ') : null, fieldType: subField.fieldType })
+                      }
+                    } else {
+                      const key = 'field' + fd.uuid
+                      const raw = resps[key]
+                      const display = (raw !== undefined && raw !== null) ? formatFieldValue(raw, fd.fieldType) : null
+                      sectionFields.push({ name: fd.label, value: display, fieldType: fd.fieldType })
+                    }
                   }
-                  if (sectionFields.length > 0) {
-                    fieldSections.push({ sectionLabel: sec.sectionLabel, fields: sectionFields })
-                  }
+                  fieldSections.push({ sectionLabel: sec.sectionLabel, fields: sectionFields })
                 }
 
                 const statusUuid = inst.statusResps?.statusUUID ?? ''

@@ -1,11 +1,9 @@
 import sand from './sand'
 import midnight from './midnight'
-import ocean from './ocean'
-import forest from './forest'
-import rose from './rose'
-import slate from './slate'
+import blackOnWhite from './blackOnWhite'
+import whiteOnBlack from './whiteOnBlack'
 
-const themes = { sand, midnight, ocean, forest, rose, slate }
+const themes = { sand, midnight, 'black on white': blackOnWhite, 'white on black': whiteOnBlack }
 
 export const themeNames = Object.keys(themes)
 

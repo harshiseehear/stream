@@ -16,7 +16,7 @@ export default function Login() {
     setLoading(true)
     try {
       await login(username, password)
-      navigate('/home')
+      navigate('/home/graph')
     } catch (err) {
       setError(err.message)
     } finally {

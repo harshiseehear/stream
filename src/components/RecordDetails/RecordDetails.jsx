@@ -56,6 +56,7 @@ export default function RecordDetails({ record, onPin, onUnpin, onClose, onColla
   const bgColor = `rgb(${Math.min(cr + 100, 255)}, ${Math.min(cg + 100, 255)}, ${Math.min(cb + 90, 255)})`
   const textColor = `rgb(${Math.max(cr - 60, 20)}, ${Math.max(cg - 60, 20)}, ${Math.max(cb - 60, 20)})`
   const subtleColor = `rgba(${Math.max(cr - 40, 30)}, ${Math.max(cg - 40, 30)}, ${Math.max(cb - 40, 30)}, 0.5)`
+  const sectionTextColor = textColor
   const borderColor = `rgba(${cr}, ${cg}, ${cb}, 0.25)`
 
   return (
@@ -156,7 +157,7 @@ export default function RecordDetails({ record, onPin, onUnpin, onClose, onColla
           {record.fieldSections && record.fieldSections.length > 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {record.fieldSections.map((sec, si) => (
-                <FieldSection key={si} sectionLabel={sec.sectionLabel} fields={sec.fields} borderColor={borderColor} subtleColor={subtleColor} />
+                <FieldSection key={si} sectionLabel={sec.sectionLabel} fields={sec.fields} borderColor={borderColor} subtleColor={subtleColor} sectionTextColor={sectionTextColor} columns={3} />
               ))}
             </div>
           ) : (

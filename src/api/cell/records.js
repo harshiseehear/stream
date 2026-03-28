@@ -33,3 +33,10 @@ export async function fetchUserContainers(recordDefUUID) {
   const containers = data.data ?? data
   return Array.isArray(containers) ? containers : []
 }
+
+export async function fetchWorkflows() {
+  const data = await authFetchSafe(`${RECORDS_API}/workflows`)
+  if (!data) return []
+  const workflows = data.data ?? data
+  return Array.isArray(workflows) ? workflows : []
+}
