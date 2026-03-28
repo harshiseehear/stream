@@ -63,7 +63,7 @@ export default function Login() {
             padding: '0 6px',
             lineHeight: 1,
             fontFamily: 'system-ui, sans-serif',
-          }}>Streamcell</span>
+          }}>Le Petite Prince</span>
         </div>
 
         {/* Inputs */}
