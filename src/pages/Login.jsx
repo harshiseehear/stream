@@ -26,7 +26,7 @@ export default function Login() {
 
   return (
     <div style={{
-      backgroundColor: bgPage,
+      background: 'linear-gradient(to right, violet, indigo, blue, green, yellow, orange, red)',
       minHeight: '100vh',
       display: 'flex',
       alignItems: 'center',
