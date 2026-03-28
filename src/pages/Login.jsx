@@ -1,8 +1,116 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { login } from '../api/cell/auth'
 import { bgPage, brandAccent, textPrimary, textSecondary, colorError, borderPanel } from '../theme/colors'
 import ThemeToggle from '../components/ThemeToggle'
+
+function DotGridBackground() {
+  const canvasRef = useRef(null)
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    let animationFrameId
+    let width, height
+    let dots = []
+    const spacing = 30
+    let mouse = { x: -1000, y: -1000 }
+    
+    const resize = () => {
+      width = window.innerWidth
+      height = window.innerHeight
+      const dpr = window.devicePixelRatio || 1
+      canvas.width = width * dpr
+      canvas.height = height * dpr
+      ctx.scale(dpr, dpr)
+      
+      dots = []
+      for (let x = 0; x < width; x += spacing) {
+        for (let y = 0; y < height; y += spacing) {
+          dots.push({ ox: x, oy: y, x, y, vx: 0, vy: 0 })
+        }
+      }
+    }
+
+    const handleMouseMove = (e) => {
+      mouse.x = e.clientX
+      mouse.y = e.clientY
+    }
+
+    const handleMouseLeave = () => {
+      mouse.x = -1000
+      mouse.y = -1000
+    }
+
+    window.addEventListener('resize', resize)
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseleave', handleMouseLeave)
+
+    resize()
+
+    const render = () => {
+      ctx.clearRect(0, 0, width, height)
+      
+      const dotColor = getComputedStyle(document.documentElement).getPropertyValue('--border-panel').trim() || '#8b7355'
+      ctx.fillStyle = dotColor
+
+      for (let i = 0; i < dots.length; i++) {
+        const dot = dots[i]
+        
+        const dx = mouse.x - dot.x
+        const dy = mouse.y - dot.y
+        const dist = Math.sqrt(dx * dx + dy * dy)
+        
+        const maxDist = 80
+        if (dist < maxDist) {
+          const force = (maxDist - dist) / maxDist
+          const angle = Math.atan2(dy, dx)
+          dot.vx -= Math.cos(angle) * force * 1.5
+          dot.vy -= Math.sin(angle) * force * 1.5
+        }
+
+        dot.vx += (dot.ox - dot.x) * 0.05
+        dot.vy += (dot.oy - dot.y) * 0.05
+        
+        dot.vx *= 0.8
+        dot.vy *= 0.8
+        
+        dot.x += dot.vx
+        dot.y += dot.vy
+
+        ctx.beginPath()
+        ctx.arc(dot.x, dot.y, 1.5, 0, Math.PI * 2)
+        ctx.fill()
+      }
+      animationFrameId = requestAnimationFrame(render)
+    }
+
+    render()
+
+    return () => {
+      window.removeEventListener('resize', resize)
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseleave', handleMouseLeave)
+      cancelAnimationFrame(animationFrameId)
+    }
+  }, [])
+
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        zIndex: 0,
+        pointerEvents: 'none',
+      }}
+    />
+  )
+}
 
 export default function Login() {
   const [username, setUsername] = useState('')
@@ -26,12 +134,14 @@ export default function Login() {
 
   return (
     <div style={{
+      position: 'relative',
       backgroundColor: bgPage,
       minHeight: '100vh',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
     }}>
+      <DotGridBackground />
       {/* Panel box */}
       <div style={{
         position: 'relative',
