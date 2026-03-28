@@ -11,6 +11,30 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
 
+  const handlePianoClick = e => {
+    const div = document.createElement('div')
+    div.style.position = 'fixed'
+    div.style.left = (e.clientX - 10) + 'px'
+    div.style.top = (e.clientY - 10) + 'px'
+    div.style.width = '20px'
+    div.style.height = '20px'
+    div.style.borderRadius = '50%'
+    div.style.backgroundColor = `hsl(${Math.random() * 360} 100% 50%)`
+    div.style.pointerEvents = 'none'
+    div.style.transition = 'all 5s ease-out'
+    div.style.zIndex = '9999'
+    document.body.appendChild(div)
+    requestAnimationFrame(() => {
+      const angle = Math.random() * Math.PI * 2
+      const dist = 50 + Math.random() * 100
+      div.style.transform = `translateX(${Math.cos(angle) * dist}px) translateY(${Math.sin(angle) * dist}px) scale(1.5)`
+      div.style.opacity = '0'
+    })
+    div.ontransitionend = e => {
+      if (e.propertyName === 'opacity') div.remove()
+    }
+  }
+
   const handleLogin = async () => {
     setError('')
     setLoading(true)
@@ -31,6 +55,7 @@ export default function Login() {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
+      flexDirection: 'column'
     }}>
       {/* Panel box */}
       <div style={{
@@ -167,6 +192,23 @@ export default function Login() {
             }}
           >{loading ? '...' : 'login'}</button>
         </div>
+      </div>
+
+      <style>{`
+        .piano-container { display: flex; position: relative; margin-top: 40px; }
+        .key-white { width: 40px; height: 120px; border: 1px solid #333; background: white; border-radius: 0 0 4px 4px; cursor: pointer; }
+        .key-white.margin { margin-left: -1px; }
+        .key-black { position: absolute; top: 0; width: 24px; height: 80px; background: black; border-radius: 0 0 4px 4px; cursor: pointer; }
+        .b1 { left: 28px; }
+        .b2 { left: 67px; }
+      `}</style>
+      <div className="piano-container">
+        <div className="key-white" onMouseDown={handlePianoClick}></div>
+        <div className="key-white margin" onMouseDown={handlePianoClick}></div>
+        <div className="key-white margin" onMouseDown={handlePianoClick}></div>
+        <div className="key-white margin" onMouseDown={handlePianoClick}></div>
+        <div className="key-black b1" onMouseDown={handlePianoClick}></div>
+        <div className="key-black b2" onMouseDown={handlePianoClick}></div>
       </div>
 
       <div style={{
