@@ -26,7 +26,7 @@ export default function Login() {
 
   return (
     <div style={{
-      backgroundColor: bgPage,
+      backgroundColor: 'pink',
       minHeight: '100vh',
       display: 'flex',
       alignItems: 'center',
@@ -59,7 +59,7 @@ export default function Login() {
             fontSize: 12,
             fontWeight: 600,
             color: textSecondary,
-            background: bgPage,
+            background: 'pink',
             padding: '0 6px',
             lineHeight: 1,
             fontFamily: 'system-ui, sans-serif',
@@ -126,7 +126,7 @@ export default function Login() {
           position: 'absolute',
           bottom: -8,
           left: 16,
-          background: bgPage,
+          background: 'pink',
           padding: '0 6px',
           zIndex: 1,
           lineHeight: 1,
@@ -144,7 +144,7 @@ export default function Login() {
           position: 'absolute',
           bottom: -8,
           right: 16,
-          background: bgPage,
+          background: 'pink',
           padding: '0 6px',
           zIndex: 1,
           lineHeight: 1,
